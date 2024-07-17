@@ -151,9 +151,9 @@ public:
     }
 
     // start the camera
-    m_camera.start(
-      m_video_device_name.c_str(), io_method, m_pixel_format_str, m_image_width,
-      m_image_height, m_framerate);
+    m_camera.start(); //
+//      m_video_device_name.c_str(), io_method, m_pixel_format_str, m_image_width,
+//      m_image_height, m_framerate);
 
     set_v4l2_params();
   }
@@ -166,23 +166,24 @@ public:
   bool take_and_send_image()
   {
     // grab the new image
-    auto new_image = m_camera.get_image();
 
     // fill in the image message
-    m_image.header.stamp.sec = new_image->stamp.tv_sec;
-    m_image.header.stamp.nsec = new_image->stamp.tv_nsec;
+    auto stamp = m_camera.get_image_timestamp();
+    m_image.header.stamp.sec = stamp.tv_sec;
+    m_image.header.stamp.nsec = stamp.tv_nsec;
 
     // Only resize if required
-    if (m_image.data.size() != static_cast<size_t>(new_image->step * new_image->height)) {
-      m_image.width = new_image->width;
-      m_image.height = new_image->height;
-      m_image.encoding = new_image->encoding;
-      m_image.step = new_image->step;
-      m_image.data.resize(new_image->step * new_image->height);
+    if (m_image.data.size() != m_camera.get_image_size_in_bytes()) {
+      m_image.width = m_camera.get_image_width();
+      m_image.height = m_camera.get_image_height();
+      m_image.encoding = m_camera.get_pixel_format()->ros();
+      m_image.step = m_camera.get_image_step();
+
+      m_image.data.resize(m_camera.get_image_size_in_bytes());
     }
 
     // Fill in image data
-    memcpy(&m_image.data[0], new_image->image, m_image.data.size());
+    m_camera.get_image(reinterpret_cast<char *>(&m_image.data[0]));
 
     // grab the camera info
     sensor_msgs::CameraInfoPtr ci(new sensor_msgs::CameraInfo(m_camera_info->getCameraInfo()));
