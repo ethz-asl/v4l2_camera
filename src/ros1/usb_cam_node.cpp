@@ -50,18 +50,13 @@ public:
   sensor_msgs::Image m_image;
   image_transport::CameraPublisher m_image_pub;
 
-  // parameters
-  std::string m_video_device_name, m_io_method_str, m_pixel_format_str, m_camera_name,
-    m_camera_info_url;
-  int m_image_width, m_image_height, m_framerate, m_exposure, m_brightness, m_contrast,
-    m_saturation, m_sharpness, m_focus, m_white_balance, m_gain;
-  bool m_auto_focus, m_auto_exposure, m_auto_white_balance;
   boost::shared_ptr<camera_info_manager::CameraInfoManager> m_camera_info;
 
   UsbCam m_camera;
 
   ros::ServiceServer m_service_start, m_service_stop;
 
+  parameters_t m_parameters;
 
   bool m_service_startcap(std_srvs::Empty::Request & req, std_srvs::Empty::Response & res)
   {
@@ -88,36 +83,37 @@ public:
     m_image_pub = it.advertiseCamera("image_raw", 1);
 
     // grab the parameters
-    m_node.param("video_device", m_video_device_name, std::string("/dev/video0"));
-    m_node.param("brightness", m_brightness, -1);  // 0-255, -1 "leave alone"
-    m_node.param("contrast", m_contrast, -1);  // 0-255, -1 "leave alone"
-    m_node.param("saturation", m_saturation, -1);  // 0-255, -1 "leave alone"
-    m_node.param("sharpness", m_sharpness, -1);  // 0-255, -1 "leave alone"
+    m_node.param("video_device", m_parameters.device_name, std::string("/dev/video0"));
+    m_node.param("brightness", m_parameters.brightness, -1);  // 0-255, -1 "leave alone"
+    m_node.param("contrast", m_parameters.contrast, -1);  // 0-255, -1 "leave alone"
+    m_node.param("saturation", m_parameters.saturation, -1);  // 0-255, -1 "leave alone"
+    m_node.param("sharpness", m_parameters.sharpness, -1);  // 0-255, -1 "leave alone"
     // possible values: mmap, read, userptr
-    m_node.param("io_method", m_io_method_str, std::string("mmap"));
-    m_node.param("image_width", m_image_width, 640);
-    m_node.param("image_height", m_image_height, 480);
-    m_node.param("framerate", m_framerate, 30);
+    m_node.param("io_method", m_parameters.io_method_name, std::string("mmap"));
+    m_node.param("image_width", m_parameters.image_width, 640);
+    m_node.param("image_height", m_parameters.image_height, 480);
+    m_node.param("framerate", m_parameters.framerate, 30);
     // possible values: yuyv, uyvy, mjpeg, yuvmono10, rgb24
-    m_node.param("pixel_format", m_pixel_format_str, std::string("mjpeg"));
+    m_node.param("pixel_format", m_parameters.pixel_format_name, std::string("mjpeg"));
+    m_node.param("av_device_format", m_parameters.av_device_format, std::string(""));
     // enable/disable autofocus
-    m_node.param("autofocus", m_auto_focus, false);
-    m_node.param("focus", m_focus, -1);  // 0-255, -1 "leave alone"
+    m_node.param("autofocus", m_parameters.autofocus, false);
+    m_node.param("focus", m_parameters.focus, -1);  // 0-255, -1 "leave alone"
     // enable/disable autoexposure
-    m_node.param("autoexposure", m_auto_exposure, true);
-    m_node.param("exposure", m_exposure, 100);
-    m_node.param("gain", m_gain, -1);  // 0-100?, -1 "leave alone"
+    m_node.param("autoexposure", m_parameters.autoexposure, true);
+    m_node.param("exposure", m_parameters.exposure, 100);
+    m_node.param("gain", m_parameters.gain, -1);  // 0-100?, -1 "leave alone"
     // enable/disable auto white balance temperature
-    m_node.param("auto_white_balance", m_auto_white_balance, true);
-    m_node.param("white_balance", m_white_balance, 4000);
+    m_node.param("auto_white_balance", m_parameters.auto_white_balance, true);
+    m_node.param("white_balance", m_parameters.white_balance, 4000);
 
     // load the camera info
     m_node.param("camera_frame_id", m_image.header.frame_id, std::string("head_camera"));
-    m_node.param("camera_name", m_camera_name, std::string("head_camera"));
-    m_node.param("camera_info_url", m_camera_info_url, std::string(""));
+    m_node.param("camera_name", m_parameters.camera_name, std::string("head_camera"));
+    m_node.param("camera_info_url", m_parameters.camera_info_url, std::string(""));
     m_camera_info.reset(
       new camera_info_manager::CameraInfoManager(
-        m_node, m_camera_name, m_camera_info_url));
+        m_node, m_parameters.camera_name, m_parameters.camera_info_url));
 
     // create Services
     m_service_start = \
@@ -127,35 +123,37 @@ public:
 
     // check for default camera info
     if (!m_camera_info->isCalibrated()) {
-      m_camera_info->setCameraName(m_video_device_name);
+      m_camera_info->setCameraName(m_parameters.camera_name);
       sensor_msgs::CameraInfo camera_info;
       camera_info.header.frame_id = m_image.header.frame_id;
-      camera_info.width = m_image_width;
-      camera_info.height = m_image_height;
+      camera_info.width = m_parameters.image_width;
+      camera_info.height = m_parameters.image_height;
       m_camera_info->setCameraInfo(camera_info);
     }
 
 
     ROS_INFO(
       "Starting '%s' (%s) at %dx%d via %s (%s) at %i FPS",
-      m_camera_name.c_str(), m_video_device_name.c_str(),
-      m_image_width, m_image_height, m_io_method_str.c_str(),
-      m_pixel_format_str.c_str(), m_framerate);
+      m_parameters.camera_name.c_str(), m_parameters.device_name.c_str(),
+      m_parameters.image_width, m_parameters.image_height, m_parameters.io_method_name.c_str(),
+      m_parameters.pixel_format_name.c_str(), m_parameters.framerate);
 
     // set the IO method
-    io_method_t io_method = usb_cam::utils::io_method_from_string(m_io_method_str);
+    io_method_t io_method = usb_cam::utils::io_method_from_string(m_parameters.io_method_name);
     if (io_method == io_method_t::IO_METHOD_UNKNOWN) {
-      ROS_FATAL("Unknown IO method '%s'", m_io_method_str.c_str());
+      ROS_FATAL("Unknown IO method '%s'", m_parameters.io_method_name.c_str());
       m_node.shutdown();
       return;
     }
 
-    // start the camera
-    m_camera.start(); //
-//      m_video_device_name.c_str(), io_method, m_pixel_format_str, m_image_width,
-//      m_image_height, m_framerate);
+    // setup camera according to new interface.
+    std::cout << m_parameters.pixel_format_name << std::endl;
+    std::cout << m_parameters.av_device_format << std::endl;
+    m_camera.configure(m_parameters, io_method);
 
     set_v4l2_params();
+
+    m_camera.start();
   }
 
   virtual ~UsbCamNode()
@@ -198,10 +196,10 @@ public:
 
   bool spin()
   {
-    ros::Rate loop_rate(this->m_framerate);
+    ros::Rate loop_rate(this->m_parameters.framerate);
     while (m_node.ok()) {
       if (m_camera.is_capturing()) {
-        if (!take_and_send_image()) {ROS_WARN("USB camera did not respond in time.");}
+        if (!take_and_send_image()) {ROS_WARN("V4L camera did not respond in time.");}
       }
       ros::spinOnce();
       loop_rate.sleep();
@@ -212,50 +210,50 @@ public:
   void set_v4l2_params()
   {
     // set camera parameters
-    if (m_brightness >= 0) {
-      m_camera.set_v4l_parameter("brightness", m_brightness);
+    if (m_parameters.brightness >= 0) {
+      m_camera.set_v4l_parameter("brightness", m_parameters.brightness);
     }
 
-    if (m_contrast >= 0) {
-      m_camera.set_v4l_parameter("contrast", m_contrast);
+    if (m_parameters.contrast >= 0) {
+      m_camera.set_v4l_parameter("contrast", m_parameters.contrast);
     }
 
-    if (m_saturation >= 0) {
-      m_camera.set_v4l_parameter("saturation", m_saturation);
+    if (m_parameters.saturation >= 0) {
+      m_camera.set_v4l_parameter("saturation", m_parameters.saturation);
     }
 
-    if (m_sharpness >= 0) {
-      m_camera.set_v4l_parameter("sharpness", m_sharpness);
+    if (m_parameters.sharpness >= 0) {
+      m_camera.set_v4l_parameter("sharpness", m_parameters.sharpness);
     }
 
-    if (m_gain >= 0) {
-      m_camera.set_v4l_parameter("gain", m_gain);
+    if (m_parameters.gain >= 0) {
+      m_camera.set_v4l_parameter("gain", m_parameters.gain);
     }
 
     // check auto white balance
-    if (m_auto_white_balance) {
+    if (m_parameters.auto_white_balance) {
       m_camera.set_v4l_parameter("white_balance_temperature_auto", 1);
     } else {
       m_camera.set_v4l_parameter("white_balance_temperature_auto", 0);
-      m_camera.set_v4l_parameter("white_balance_temperature", m_white_balance);
+      m_camera.set_v4l_parameter("white_balance_temperature", m_parameters.white_balance);
     }
 
     // check auto exposure
-    if (!m_auto_exposure) {
+    if (!m_parameters.autoexposure) {
       // turn down exposure control (from max of 3)
       m_camera.set_v4l_parameter("m_exposureauto", 1);
       // change the exposure level
-      m_camera.set_v4l_parameter("m_exposureabsolute", m_exposure);
+      m_camera.set_v4l_parameter("m_exposureabsolute", m_parameters.exposure);
     }
 
     // check auto focus
-    if (m_auto_focus) {
+    if (m_parameters.autofocus) {
       m_camera.set_auto_focus(1);
       m_camera.set_v4l_parameter("m_focusauto", 1);
     } else {
       m_camera.set_v4l_parameter("m_focusauto", 0);
-      if (m_focus >= 0) {
-        m_camera.set_v4l_parameter("m_focusabsolute", m_focus);
+      if (m_parameters.focus >= 0) {
+        m_camera.set_v4l_parameter("m_focusabsolute", m_parameters.focus);
       }
     }
   }

@@ -368,6 +368,12 @@ public:
         parameters.av_device_format,
       });
 
+    std::cout << parameters.pixel_format_name << std::endl;
+    std::cout << parameters.image_width << std::endl;
+    std::cout << parameters.image_height << std::endl;
+    std::cout << parameters.av_device_format << std::endl;
+    std::cout << m_image.number_of_pixels << std::endl;
+
     // Look for specified pixel format
     if (!this->set_pixel_format(format_args)) {
       throw std::invalid_argument(

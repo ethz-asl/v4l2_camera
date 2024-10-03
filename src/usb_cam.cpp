@@ -582,7 +582,7 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
   {
     current_size->index = 0;
     current_size->pixel_format = current_format->pixelformat;
-
+    std::cout << "test: "<<current_size->pixel_format << std::endl;
     for (current_size->index = 0;
       usb_cam::utils::xioctl(
         m_fd, VIDIOC_ENUM_FRAMESIZES, current_size) == 0;
@@ -592,11 +592,13 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
       current_interval->pixel_format = current_size->pixel_format;
       current_interval->width = current_size->discrete.width;
       current_interval->height = current_size->discrete.height;
+      std::cout << "\twidth" << current_interval->width << std::endl;
       for (current_interval->index = 0;
         usb_cam::utils::xioctl(
           m_fd, VIDIOC_ENUM_FRAMEINTERVALS, current_interval) == 0;
         ++current_interval->index)
       {
+	std::cout <<"\t\t type"<< current_interval->type<<std::endl;
         if (current_interval->type == V4L2_FRMIVAL_TYPE_DISCRETE) {
           capture_format_t capture_format;
           capture_format.format = *current_format;
