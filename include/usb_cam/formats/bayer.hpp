@@ -10,14 +10,14 @@ namespace usb_cam
 namespace formats
 {
 
-class BA10 : public pixel_format_base
+class BAYER_GRBG10 : public pixel_format_base
 {
 public:
-  explicit BA10(const format_arguments_t & args = format_arguments_t())
+  explicit BAYER_GRBG10(const format_arguments_t & args = format_arguments_t())
   : pixel_format_base(
-      "BA10",               // Format name
+      "bayer_grbg10",               // Format name
       V4L2_PIX_FMT_SGRBG10,         // V4L2 identifier for GRBG 10-bit Bayer
-      usb_cam::constants::BA10,
+      usb_cam::constants::BAYER_GRBG10,
       1,
       10,
       true),                        // True indicates that this needs a conversion to RGB8

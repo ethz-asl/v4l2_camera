@@ -521,7 +521,9 @@ void UsbCam::configure(
   m_image.set_number_of_pixels();
 
   // Do this before calling set_bytes_per_line and set_size_in_bytes
+  std::cout << "In configure?" << std::endl;
   m_image.pixel_format = set_pixel_format(parameters);
+  std::cout << "After set_pixel_format" << std::endl;
   m_image.set_bytes_per_line();
   m_image.set_size_in_bytes();
   m_framerate = parameters.framerate;
@@ -599,7 +601,10 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
       // Try to enumerate frame intervals
       int ret = usb_cam::utils::xioctl(m_fd, VIDIOC_ENUM_FRAMEINTERVALS, current_interval);
       if (ret == 0) {
-        for (current_interval->index = 0; ret == 0; ++current_interval->index) {
+        for (current_interval->index = 0;
+             ret == 0;
+             ++current_interval->index)
+        {
           std::cout <<"\t\t type: "<< current_interval->type << std::endl;
           if (current_interval->type == V4L2_FRMIVAL_TYPE_DISCRETE) {
             capture_format_t capture_format;
@@ -609,7 +614,6 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
           }
           ret = usb_cam::utils::xioctl(m_fd, VIDIOC_ENUM_FRAMEINTERVALS, current_interval);
         }
-
       } else {
         // Handle case where frame intervals are not supported
         std::cerr << "\tNo frame interval support for format: "
@@ -620,6 +624,19 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
         // Optionally: Add format without frame interval
         capture_format_t capture_format;
         capture_format.format = *current_format;
+
+        // Populate v4l2_fmt with default values if intervals are not available
+        memset(&capture_format.v4l2_fmt, 0, sizeof(v4l2_frmivalenum));
+        capture_format.v4l2_fmt.pixel_format = current_size->pixel_format;
+        capture_format.v4l2_fmt.width = current_size->discrete.width;
+        capture_format.v4l2_fmt.height = current_size->discrete.height;
+
+        // Set a default or assumed frame interval if needed
+        capture_format.v4l2_fmt.type = V4L2_FRMIVAL_TYPE_DISCRETE;
+        capture_format.v4l2_fmt.discrete.numerator = 1;  // Default frame rate assumption: 30 FPS
+        // TODO: Get this from args
+        capture_format.v4l2_fmt.discrete.denominator = 30;
+
         m_supported_formats.push_back(capture_format);
       }
     }  // size loop
@@ -631,6 +648,7 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
 
   return m_supported_formats;
 }
+
 
 
 // ETHZ ASL: Add pixel format conversion
