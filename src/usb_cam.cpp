@@ -441,23 +441,30 @@ void UsbCam::init_device()
     throw strerror(errno);
   }
 
+  std::cout << "before set stream params" << std::endl;
+
   struct v4l2_streamparm stream_params;
   memset(&stream_params, 0, sizeof(stream_params));
   stream_params.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+  // Check if getting stream parameters is supported
   if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_G_PARM), &stream_params) < 0) {
-    throw strerror(errno);
-  }
+      // Stream parameters not supported, log a warning and set default values
+      std::cerr << "Warning: Unable to get stream parameters: " << strerror(errno) << ". Proceeding with default values." << std::endl;
 
-  if (!stream_params.parm.capture.capability && V4L2_CAP_TIMEPERFRAME) {
-    throw "V4L2_CAP_TIMEPERFRAME not supported";
-  }
+      // Set default framerate if the camera doesn't support it
+      stream_params.parm.capture.timeperframe.numerator = 1;
+      stream_params.parm.capture.timeperframe.denominator = m_framerate; // your default framerate
+  } else {
+      // If stream parameters are successfully retrieved, set the framerate
+      if (stream_params.parm.capture.capability & V4L2_CAP_TIMEPERFRAME) {
+          stream_params.parm.capture.timeperframe.numerator = 1;
+          stream_params.parm.capture.timeperframe.denominator = m_framerate;
 
-  // TODO(lucasw) need to get list of valid numerator/denominator pairs
-  // and match closest to what user put in.
-  stream_params.parm.capture.timeperframe.numerator = 1;
-  stream_params.parm.capture.timeperframe.denominator = m_framerate;
-  if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_S_PARM), &stream_params) < 0) {
-    throw std::invalid_argument("Couldn't set camera framerate");
+          if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_S_PARM), &stream_params) < 0) {
+              throw std::runtime_error("Couldn't set camera framerate: " + std::string(strerror(errno)));
+          }
+      }
   }
 
   switch (m_io) {
@@ -474,6 +481,8 @@ void UsbCam::init_device()
       // TODO(flynneva): log something
       break;
   }
+
+  std::cout << "INIT DONE" << std::endl;
 }
 
 void UsbCam::close_device()
@@ -521,9 +530,7 @@ void UsbCam::configure(
   m_image.set_number_of_pixels();
 
   // Do this before calling set_bytes_per_line and set_size_in_bytes
-  std::cout << "In configure?" << std::endl;
   m_image.pixel_format = set_pixel_format(parameters);
-  std::cout << "After set_pixel_format" << std::endl;
   m_image.set_bytes_per_line();
   m_image.set_size_in_bytes();
   m_framerate = parameters.framerate;

@@ -17,9 +17,9 @@ public:
   : pixel_format_base(
       "bayer_grbg10",               // Format name
       V4L2_PIX_FMT_SGRBG10,         // V4L2 identifier for GRBG 10-bit Bayer
-      usb_cam::constants::BAYER_GRBG10,
-      1,
-      10,
+      usb_cam::constants::RGB8, // Converts to RGB8
+      3,
+      8,
       true),                        // True indicates that this needs a conversion to RGB8
     m_number_of_pixels(args.pixels)
   {}

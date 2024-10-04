@@ -347,8 +347,6 @@ public:
 
     std::cout << "This device supports the following formats:" << std::endl;
     for (auto fmt : this->supported_formats()) {
-      // TODO: Why not getting here?
-
       // Always list the devices supported formats for the user
       std::cout << "\t" << fmt.format.description << " ";
       std::cout << fmt.v4l2_fmt.width << " x " << fmt.v4l2_fmt.height << " (";
