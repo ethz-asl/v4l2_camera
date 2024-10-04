@@ -582,7 +582,7 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
   {
     current_size->index = 0;
     current_size->pixel_format = current_format->pixelformat;
-    std::cout << "test: "<<current_size->pixel_format << std::endl;
+    std::cout << "Pixel format: " << pixel_format_to_string(current_size->pixel_format) << std::endl;
     for (current_size->index = 0;
       usb_cam::utils::xioctl(
         m_fd, VIDIOC_ENUM_FRAMESIZES, current_size) == 0;
@@ -592,13 +592,15 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
       current_interval->pixel_format = current_size->pixel_format;
       current_interval->width = current_size->discrete.width;
       current_interval->height = current_size->discrete.height;
-      std::cout << "\twidth" << current_interval->width << std::endl;
+
+      std::cout << "\twidth: " << current_interval->width;
+      std::cout << " x " << current_interval->height << std::endl;
       for (current_interval->index = 0;
         usb_cam::utils::xioctl(
           m_fd, VIDIOC_ENUM_FRAMEINTERVALS, current_interval) == 0;
         ++current_interval->index)
       {
-	std::cout <<"\t\t type"<< current_interval->type<<std::endl;
+	      std::cout <<"\t\t type"<< current_interval->type<<std::endl;
         if (current_interval->type == V4L2_FRMIVAL_TYPE_DISCRETE) {
           capture_format_t capture_format;
           capture_format.format = *current_format;
@@ -615,6 +617,19 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
 
   return m_supported_formats;
 }
+
+// ETHZ ASL: Add pixel format conversion
+std::string UsbCam::pixel_format_to_string(uint32_t pixel_format)
+{
+    char fourcc[5];  // Four characters plus null-terminator
+    fourcc[0] = pixel_format & 0xFF;        // First byte
+    fourcc[1] = (pixel_format >> 8) & 0xFF; // Second byte
+    fourcc[2] = (pixel_format >> 16) & 0xFF;// Third byte
+    fourcc[3] = (pixel_format >> 24) & 0xFF;// Fourth byte
+    fourcc[4] = '\0';                       // Null-terminator for string
+    return std::string(fourcc);
+}
+// ETHZ ASL: End
 
 void UsbCam::grab_image()
 {

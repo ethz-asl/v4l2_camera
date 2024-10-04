@@ -196,6 +196,10 @@ public:
 
   std::vector<capture_format_t> get_supported_formats();
 
+  // ETHZ ASL: Add pixel format conversion
+  std::string pixel_format_to_string(uint32_t pixel_format);
+  // ETHZ ASL: End
+
   // enables/disable auto focus
   bool set_auto_focus(int value);
 
