@@ -53,6 +53,7 @@ extern "C" {
 #include "usb_cam/formats/uyvy.hpp"
 #include "usb_cam/formats/yuyv.hpp"
 #include "usb_cam/formats/m420.hpp"
+#include "usb_cam/formats/ba10.hpp"
 
 
 namespace usb_cam
@@ -74,6 +75,7 @@ using usb_cam::formats::Y102MONO8;
 using usb_cam::formats::RAW_MJPEG;
 using usb_cam::formats::MJPEG2RGB;
 using usb_cam::formats::M4202RGB;
+using usb_cam::formats::BA10;
 
 
 /// @brief list all supported formats that this driver supports
@@ -92,6 +94,7 @@ std::vector<std::shared_ptr<pixel_format_base>> driver_supported_formats(
     std::make_shared<RAW_MJPEG>(args),
     std::make_shared<MJPEG2RGB>(args),
     std::make_shared<M4202RGB>(args),
+    std::make_shared<BA10>(args),
   };
   return fmts;
 }
@@ -307,6 +310,7 @@ public:
     if (m_supported_formats.size() == 0) {
       this->get_supported_formats();
     }
+    std::cout << "supported_format() len: " << m_supported_formats.size() << std::endl;
 
     return m_supported_formats;
   }
@@ -325,6 +329,8 @@ public:
     for (auto driver_fmt : driver_supported_formats(args)) {
       if (driver_fmt->name() == args.name) {
         found_driver_format = driver_fmt;
+        std::cout << driver_fmt->name() << " supported by this ROS driver" << std::endl;
+        break;
       }
     }
 
@@ -341,6 +347,8 @@ public:
 
     std::cout << "This device supports the following formats:" << std::endl;
     for (auto fmt : this->supported_formats()) {
+      // TODO: Why not getting here?
+
       // Always list the devices supported formats for the user
       std::cout << "\t" << fmt.format.description << " ";
       std::cout << fmt.v4l2_fmt.width << " x " << fmt.v4l2_fmt.height << " (";
@@ -352,6 +360,8 @@ public:
         m_image.pixel_format = found_driver_format;
       }
     }
+
+    std::cout << "RESULT: " << result << std::endl;
 
     return result;
   }
