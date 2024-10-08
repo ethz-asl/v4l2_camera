@@ -441,8 +441,6 @@ void UsbCam::init_device()
     throw strerror(errno);
   }
 
-  std::cout << "before set stream params" << std::endl;
-
   struct v4l2_streamparm stream_params;
   memset(&stream_params, 0, sizeof(stream_params));
   stream_params.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;

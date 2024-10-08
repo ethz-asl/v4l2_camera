@@ -379,6 +379,7 @@ public:
         parameters.av_device_format,
       });
 
+    std::cout << "set_pixel_format: " << std::endl;
     std::cout << parameters.pixel_format_name << std::endl;
     std::cout << parameters.image_width << std::endl;
     std::cout << parameters.image_height << std::endl;
