@@ -34,20 +34,25 @@ public:
     /// @param bytes_used number of bytes used by source image
     void convert(const char* &src, char* &dest, const int& bytes_used) override {
         (void)bytes_used;
+        // https://www.kernel.org/doc/html/v4.9/media/uapi/v4l/pixfmt-srggb10.html
+        // In 10 bit Bayer GRBG format
+        // Each row has 2 * width pixels
         const uint16_t* src_16bit = reinterpret_cast<const uint16_t*>(src);
         cv::Mat bayer_image(_height, _width, CV_16UC1, (void*)src_16bit);
-        cv::Mat rgb_image;
-        cv::demosaicing(bayer_image, rgb_image, cv::COLOR_BayerGR2RGB);
-        std::memcpy(dest, rgb_image.data, _rgb8_bytes);
 
-        cv::imshow("Image", rgb_image);
-        cv::waitKey(0);
+        // Demosaic and convert to 8 bit mat
+        cv::demosaicing(bayer_image, _rgb_image, cv::COLOR_BayerGR2RGB);
+        _rgb_image.convertTo(_rgb_image_8bit, CV_8U, _scaling_16_to_8);
+        std::memcpy(dest, _rgb_image_8bit.data, _rgb8_bytes);
     }
 
 private:
     int _height;
     int _rgb8_bytes;
     int _width;
+    cv::Mat _rgb_image;
+    cv::Mat _rgb_image_8bit;
+    const double _scaling_16_to_8 = 256.0 / 65536.0;
 };
 
 }  // namespace formats
