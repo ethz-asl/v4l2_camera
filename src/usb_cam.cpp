@@ -371,6 +371,23 @@ void UsbCam::init_userp()
   }
 }
 
+int UsbCam::get_control_id_from_str(std::string control_str) {
+    // Search for the ctrl_id
+    int id = -1;
+    struct v4l2_queryctrl queryctrl;
+    memset(&queryctrl, 0, sizeof(queryctrl));
+
+    queryctrl.id = V4L2_CID_BASE;
+    while (ioctl(m_fd, VIDIOC_QUERYCTRL, &queryctrl) == 0) {
+        if (!(queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) && strstr(reinterpret_cast<const char*>(queryctrl.name), control_str.c_str())) {
+            id = queryctrl.id;
+            break;
+        }
+        queryctrl.id++;
+    }
+    return id;
+}
+
 void UsbCam::init_device()
 {
   struct v4l2_capability cap;
@@ -445,14 +462,29 @@ void UsbCam::init_device()
   memset(&stream_params, 0, sizeof(stream_params));
   stream_params.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-  // Check if getting stream parameters is supported
-  if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_G_PARM), &stream_params) < 0) {
-      // Stream parameters not supported, log a warning and set default values
-      std::cerr << "Warning: Unable to get stream parameters: " << strerror(errno) << ". Proceeding with default values." << std::endl;
+    // Check if getting stream parameters is supported
+    if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_G_PARM), &stream_params) < 0) {
+        // Stream parameters not supported, log a warning and set default values
+        std::cerr << "Warning: Unable to get stream parameters: " << strerror(errno) << ". Manually searching" << std::endl;
+        const int frame_rate_id = get_control_id_from_str("frame_rate");
+        if (frame_rate_id > 0) {
+            struct v4l2_control control;
+            memset(&control, 0, sizeof(control));
 
-      // Set default framerate if the camera doesn't support it
-      stream_params.parm.capture.timeperframe.numerator = 1;
-      stream_params.parm.capture.timeperframe.denominator = m_framerate; // your default framerate
+            // TODO: Could check min/max
+            control.id = frame_rate_id;
+            control.value = static_cast<int>(m_framerate);
+            if (ioctl(m_fd, VIDIOC_S_CTRL, &control) == -1) {
+                std::cerr << "Error setting frame rate: " << strerror(errno) << std::endl;
+
+            } else {
+                std::cout << "Frame rate set to " << control.value << " FPS" << std::endl;
+            }
+        } else {
+            std::cout << "Error finding frame_rate control id" << std::endl;
+
+        }
+
   } else {
       // If stream parameters are successfully retrieved, set the framerate
       if (stream_params.parm.capture.capability & V4L2_CAP_TIMEPERFRAME) {
@@ -479,8 +511,6 @@ void UsbCam::init_device()
       // TODO(flynneva): log something
       break;
   }
-
-  std::cout << "INIT DONE" << std::endl;
 }
 
 void UsbCam::close_device()

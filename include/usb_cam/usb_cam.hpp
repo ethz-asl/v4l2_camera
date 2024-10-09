@@ -430,6 +430,8 @@ private:
   int m_framerate;
   const time_t m_epoch_time_shift_us;
   std::vector<capture_format_t> m_supported_formats;
+
+  int get_control_id_from_str(std::string control_str);
 };
 
 }  // namespace usb_cam
