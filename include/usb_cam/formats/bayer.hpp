@@ -26,6 +26,7 @@ public:
     _height(args.height),
     _width(args.width) {
         _rgb8_bytes = 3 * _height * _width;
+        _reallocate_images();
     }
 
     /// @brief Convert a BAYER_GRBG10 image to RGB8
@@ -37,22 +38,32 @@ public:
         // https://www.kernel.org/doc/html/v4.9/media/uapi/v4l/pixfmt-srggb10.html
         // In 10 bit Bayer GRBG format
         // Each row has 2 * width pixels
-        const uint16_t* src_16bit = reinterpret_cast<const uint16_t*>(src);
-        cv::Mat bayer_image(_height, _width, CV_16UC1, (void*)src_16bit);
+        // Only reallocate if the size changes
+        _reallocate_images();
+        _bayer_image.data = (uchar*)src;
 
         // Demosaic and convert to 8 bit mat
-        cv::demosaicing(bayer_image, _rgb_image, cv::COLOR_BayerGR2RGB);
+        cv::demosaicing(_bayer_image, _rgb_image, cv::COLOR_BayerGR2RGB);
         _rgb_image.convertTo(_rgb_image_8bit, CV_8U, _scaling_16_to_8);
         std::memcpy(dest, _rgb_image_8bit.data, _rgb8_bytes);
     }
 
 private:
-    int _height;
-    int _rgb8_bytes;
-    int _width;
-    cv::Mat _rgb_image;
-    cv::Mat _rgb_image_8bit;
     const double _scaling_16_to_8 = 256.0 / 65536.0;
+    cv::Mat _bayer_image;
+    cv::Mat _rgb_image_8bit;
+    cv::Mat _rgb_image;
+    int _height = 0;
+    int _rgb8_bytes = 0;
+    int _width = 0;
+
+    void _reallocate_images() {
+        if (_bayer_image.rows != _height || _bayer_image.cols != _width ||
+            _rgb_image.rows != _width || _rgb_image.cols != _width) {
+            _bayer_image = cv::Mat(_height, _width, CV_16UC1);
+            _rgb_image = cv::Mat(_height, _width, CV_16UC1);
+        }
+    }
 };
 
 }  // namespace formats
