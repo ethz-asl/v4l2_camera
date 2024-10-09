@@ -43,7 +43,9 @@ public:
         _bayer_image.data = (uchar*)src;
 
         // Demosaic and convert to 8 bit mat
-        cv::demosaicing(_bayer_image, _rgb_image, cv::COLOR_BayerGR2RGB);
+        // This is somehow unexpected conversion, but maybe related to:
+        // https://github.com/opencv/opencv/issues/19629
+        cv::cvtColor(_bayer_image, _rgb_image, cv::COLOR_BayerGR2BGR);
         _rgb_image.convertTo(_rgb_image_8bit, CV_8U, _scaling_16_to_8);
         std::memcpy(dest, _rgb_image_8bit.data, _rgb8_bytes);
     }

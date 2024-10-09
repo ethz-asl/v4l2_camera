@@ -310,7 +310,7 @@ public:
     if (m_supported_formats.size() == 0) {
       this->get_supported_formats();
     }
-    std::cout << "Supported format length: " << m_supported_formats.size() << std::endl;
+    // std::cout << "Supported format length: " << m_supported_formats.size() << std::endl;
 
     return m_supported_formats;
   }
@@ -356,7 +356,7 @@ public:
       if (fmt.v4l2_fmt.pixel_format == found_driver_format->v4l2()) {
         result = true;
         m_image.pixel_format = found_driver_format;
-        std::cout << "set_pixel_format: Success" << std::endl;
+        // std::cout << "set_pixel_format: Success" << std::endl;
       }
     }
 
@@ -378,13 +378,6 @@ public:
         m_image.number_of_pixels,
         parameters.av_device_format,
       });
-
-    std::cout << "set_pixel_format: " << std::endl;
-    std::cout << parameters.pixel_format_name << std::endl;
-    std::cout << parameters.image_width << std::endl;
-    std::cout << parameters.image_height << std::endl;
-    std::cout << parameters.av_device_format << std::endl;
-    std::cout << m_image.number_of_pixels << std::endl;
 
     // Look for specified pixel format
     if (!this->set_pixel_format(format_args)) {

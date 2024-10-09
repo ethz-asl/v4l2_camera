@@ -374,12 +374,14 @@ void UsbCam::init_userp()
 int UsbCam::get_control_id_from_str(std::string control_str) {
     // Search for the ctrl_id
     int id = -1;
+    int ret;
     struct v4l2_queryctrl queryctrl;
     memset(&queryctrl, 0, sizeof(queryctrl));
 
     queryctrl.id = V4L2_CID_BASE;
-    while (ioctl(m_fd, VIDIOC_QUERYCTRL, &queryctrl) == 0) {
-        if (!(queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) && strstr(reinterpret_cast<const char*>(queryctrl.name), control_str.c_str())) {
+    while (queryctrl.id < 0x990000) {
+        ret = ioctl(m_fd, VIDIOC_QUERYCTRL, &queryctrl);
+        if ((ret == 0) && !(queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) && strstr(reinterpret_cast<const char*>(queryctrl.name), control_str.c_str())) {
             id = queryctrl.id;
             break;
         }
@@ -458,44 +460,44 @@ void UsbCam::init_device()
     throw strerror(errno);
   }
 
-  struct v4l2_streamparm stream_params;
-  memset(&stream_params, 0, sizeof(stream_params));
-  stream_params.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  // struct v4l2_streamparm stream_params;
+  // memset(&stream_params, 0, sizeof(stream_params));
+  // stream_params.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-    // Check if getting stream parameters is supported
-    if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_G_PARM), &stream_params) < 0) {
-        // Stream parameters not supported, log a warning and set default values
-        std::cerr << "Warning: Unable to get stream parameters: " << strerror(errno) << ". Manually searching" << std::endl;
-        const int frame_rate_id = get_control_id_from_str("frame_rate");
-        if (frame_rate_id > 0) {
-            struct v4l2_control control;
-            memset(&control, 0, sizeof(control));
+  //   // Check if getting stream parameters is supported
+  //   if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_G_PARM), &stream_params) < 0) {
+  //       // Stream parameters not supported, log a warning and set default values
+  //       std::cerr << "Warning: Unable to get stream parameters: " << strerror(errno) << ". Manually searching" << std::endl;
+  //       const int frame_rate_id = get_control_id_from_str("frame_rate");
+  //       if (frame_rate_id > 0) {
+  //           struct v4l2_control control;
+  //           memset(&control, 0, sizeof(control));
 
-            // TODO: Could check min/max
-            control.id = frame_rate_id;
-            control.value = static_cast<int>(m_framerate);
-            if (ioctl(m_fd, VIDIOC_S_CTRL, &control) == -1) {
-                std::cerr << "Error setting frame rate: " << strerror(errno) << std::endl;
+  //           // TODO: Could check min/max
+  //           control.id = frame_rate_id;
+  //           control.value = static_cast<int>(m_framerate);
+  //           if (ioctl(m_fd, VIDIOC_S_CTRL, &control) == -1) {
+  //               std::cerr << "Error setting frame rate: " << strerror(errno) << std::endl;
 
-            } else {
-                std::cout << "Frame rate set to " << control.value << " FPS" << std::endl;
-            }
-        } else {
-            std::cout << "Error finding frame_rate control id" << std::endl;
+  //           } else {
+  //               std::cout << "Frame rate set to " << control.value << " FPS" << std::endl;
+  //           }
+  //       } else {
+  //           std::cout << "Error finding frame_rate control id" << std::endl;
 
-        }
+  //       }
 
-  } else {
-      // If stream parameters are successfully retrieved, set the framerate
-      if (stream_params.parm.capture.capability & V4L2_CAP_TIMEPERFRAME) {
-          stream_params.parm.capture.timeperframe.numerator = 1;
-          stream_params.parm.capture.timeperframe.denominator = m_framerate;
+  // } else {
+  //     // If stream parameters are successfully retrieved, set the framerate
+  //     if (stream_params.parm.capture.capability & V4L2_CAP_TIMEPERFRAME) {
+  //         stream_params.parm.capture.timeperframe.numerator = 1;
+  //         stream_params.parm.capture.timeperframe.denominator = m_framerate;
 
-          if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_S_PARM), &stream_params) < 0) {
-              throw std::runtime_error("Couldn't set camera framerate: " + std::string(strerror(errno)));
-          }
-      }
-  }
+  //         if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_S_PARM), &stream_params) < 0) {
+  //             throw std::runtime_error("Couldn't set camera framerate: " + std::string(strerror(errno)));
+  //         }
+  //     }
+  // }
 
   switch (m_io) {
     case io_method_t::IO_METHOD_READ:
@@ -620,7 +622,7 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
     current_size->index = 0;
     current_size->pixel_format = current_format->pixelformat;
 
-    std::cout << "Pixel format: " << pixel_format_to_string(current_size->pixel_format) << std::endl;
+    // std::cout << "Pixel format: " << pixel_format_to_string(current_size->pixel_format) << std::endl;
 
     for (current_size->index = 0;
          usb_cam::utils::xioctl(m_fd, VIDIOC_ENUM_FRAMESIZES, current_size) == 0;
@@ -631,7 +633,7 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
       current_interval->width = current_size->discrete.width;
       current_interval->height = current_size->discrete.height;
 
-      std::cout << "\tsize: " << current_interval->width << " x " << current_interval->height << std::endl;
+      // std::cout << "\tsize: " << current_interval->width << " x " << current_interval->height << std::endl;
 
       // Try to enumerate frame intervals
       int ret = usb_cam::utils::xioctl(m_fd, VIDIOC_ENUM_FRAMEINTERVALS, current_interval);
@@ -640,7 +642,7 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
              ret == 0;
              ++current_interval->index)
         {
-          std::cout <<"\t\t type: "<< current_interval->type << std::endl;
+          // std::cout <<"\t\t type: "<< current_interval->type << std::endl;
           if (current_interval->type == V4L2_FRMIVAL_TYPE_DISCRETE) {
             capture_format_t capture_format;
             capture_format.format = *current_format;
@@ -651,10 +653,10 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
         }
       } else {
         // Handle case where frame intervals are not supported
-        std::cerr << "\tNo frame interval support for format: "
-                  << pixel_format_to_string(current_size->pixel_format)
-                  << " size: " << current_interval->width << "x" << current_interval->height
-                  << std::endl;
+        // std::cerr << "\tNo frame interval support for format: "
+        //           << pixel_format_to_string(current_size->pixel_format)
+        //           << " size: " << current_interval->width << "x" << current_interval->height
+        //           << std::endl;
 
         // Optionally: Add format without frame interval
         capture_format_t capture_format;

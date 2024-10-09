@@ -7,5 +7,8 @@
     <param name="av_device_format" value="GRAY16BE" />
     <param name="camera_frame_id" value="usb_cam" />
     <param name="io_method" value="mmap"/>
+    <param name="exposure" value="500"/>
+    <param name="autoexposure" value="false"/>
+    <param name="framerate" value="false"/>
   </node>
 </launch>
