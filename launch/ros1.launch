@@ -1,5 +1,7 @@
+
 <launch>
-  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" launch-prefix="gdb -ex run --args" >
+  <!-- launch-prefix="gdb -ex run -/-args" -->
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
     <param name="video_device" value="/dev/video0" />
     <param name="image_width" value="1920" />
     <param name="image_height" value="1200" />
@@ -10,5 +12,10 @@
     <param name="exposure" value="500"/>
     <param name="autoexposure" value="false"/>
     <param name="framerate" value="false"/>
+
+  <!-- Hardcore guess TBD actual calibration -->
+    <param name="wb_blue_gain" value="0.0"/>
+    <param name="wb_green_gain" value="0.0"/>
+    <param name="wb_red_gain" value="0.0"/>
   </node>
 </launch>

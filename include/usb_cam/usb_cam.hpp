@@ -133,9 +133,9 @@ typedef struct
   bool auto_white_balance;
   bool autoexposure;
   bool autofocus;
-  float wb_blue_gain;
-  float wb_green_gain;
-  float wb_red_gain;
+  double wb_blue_gain;
+  double wb_green_gain;
+  double wb_red_gain;
 } parameters_t;
 
 typedef struct

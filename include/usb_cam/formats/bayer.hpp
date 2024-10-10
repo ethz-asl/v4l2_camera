@@ -5,7 +5,10 @@
 #include "usb_cam/formats/pixel_format_base.hpp"
 #include "usb_cam/formats/utils.hpp"
 
+#include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudaimgproc.hpp>
 #include <opencv2/opencv.hpp>
+#include <opencv2/xphoto.hpp>
 
 namespace usb_cam
 {
@@ -27,10 +30,17 @@ public:
     _wb_green_gain(args.wb_green_gain),
     _wb_red_gain(args.wb_red_gain),
     _height(args.height),
+    _use_cuda(cv::cuda::getCudaEnabledDeviceCount() > 0),
     _width(args.width) {
         _rgb8_bytes = 3 * _height * _width;
         _reallocate_images();
         std::cout << "OpenCV version: " << CV_VERSION << std::endl;
+        if (_use_cuda) {
+            std::cout << "Using CUDA: " << _use_cuda << std::endl;
+            cv::cuda::setDevice(0);
+        }
+        // TODO: Only do on CPU
+        _wb = cv::xphoto::createGrayworldWB();
     }
 
     /// @brief Convert a BAYER_GRBG10 image to RGB8
@@ -48,28 +58,51 @@ public:
 
         // Demosaic and convert to 8 bit mat
         // RVIZ and/or ROS expects BGR
-        cv::cvtColor(_bayer_image, _rgb_image, cv::COLOR_BayerGR2BGR);
+        if (_use_cuda) {
+            _gpu_bayer_image.upload(_bayer_image);
+            cv::cuda::cvtColor(_gpu_bayer_image, _gpu_rgb_image, cv::COLOR_BayerGR2BGR);
+            // TMP
+            _gpu_rgb_image.download(_rgb_image);
+
+        } else {
+            cv::cvtColor(_bayer_image, _rgb_image, cv::COLOR_BayerGR2BGR);
+        }
 
         // Directly shift the 16-bit pixel values to 8-bit
+        // TODO: Casting on GPU?
         for (int y = 0; y < _rgb_image.rows; ++y) {
             const cv::Vec3w* row_in = _rgb_image.ptr<cv::Vec3w>(y);
             cv::Vec3b* row_out = _rgb_image_8bit.ptr<cv::Vec3b>(y);
             for (int x = 0; x < _rgb_image.cols; ++x) {
-                row_out[x][0] = cv::saturate_cast<uchar>((row_in[x][0] >> 8) * _wb_blue_gain);
-                row_out[x][1] = cv::saturate_cast<uchar>((row_in[x][1] >> 8) * _wb_green_gain);
-                row_out[x][2] = cv::saturate_cast<uchar>((row_in[x][2] >> 8) * _wb_red_gain);
+                row_out[x][0] = cv::saturate_cast<uchar>((row_in[x][0] >> 8));
+                row_out[x][1] = cv::saturate_cast<uchar>((row_in[x][1] >> 8));
+                row_out[x][2] = cv::saturate_cast<uchar>((row_in[x][2] >> 8));
             }
         }
+
+        // Apply gains from launch file if specified
+        // otherwise runs auto calibration grayworldWB
+        _gray_world_wb(_rgb_image_8bit);
+
+        // TODO: If casting and wb is done on gpu
+        // if (_use_cuda && false) {
+        //     _gpu_rgb_image_8bit.download(_rgb_image_8bit);
+        // }
         std::memcpy(dest, _rgb_image_8bit.data, _rgb8_bytes);
     }
 
 private:
+    bool _use_cuda = false;
+    cv::cuda::GpuMat _gpu_bayer_image;
+    cv::cuda::GpuMat _gpu_rgb_image_8bit;
+    cv::cuda::GpuMat _gpu_rgb_image;
     cv::Mat _bayer_image;
     cv::Mat _rgb_image_8bit;
     cv::Mat _rgb_image;
-    float _wb_blue_gain;
-    float _wb_green_gain;
-    float _wb_red_gain;
+    cv::Ptr<cv::xphoto::WhiteBalancer> _wb;
+    double _wb_blue_gain;
+    double _wb_green_gain;
+    double _wb_red_gain;
     int _height = 0;
     int _rgb8_bytes = 0;
     int _width = 0;
@@ -79,7 +112,42 @@ private:
             _bayer_image = cv::Mat(_height, _width, CV_16UC1);
             _rgb_image = cv::Mat(_height, _width, CV_16UC3);
             _rgb_image_8bit = cv::Mat(_height, _width, CV_8UC3);
+
+            if (_use_cuda) {
+                _gpu_bayer_image = cv::cuda::GpuMat(_height, _width, CV_16UC1);
+                _gpu_rgb_image = cv::cuda::GpuMat(_height, _width, CV_16UC3);
+                _gpu_rgb_image_8bit = cv::cuda::GpuMat(_height, _width, CV_8UC3);
+            }
         }
+    }
+
+    void _gray_world_wb(cv::Mat& image) {
+        std::vector<cv::Mat> channels;
+        cv::split(image, channels);
+
+        if (_wb_blue_gain < 1e-6 || _wb_green_gain < 1e-6 || _wb_red_gain < 1e-6) {
+            double means[3];
+            double mean_gw;
+            for (size_t i=0; i < 3; i++) {
+                means[i] = cv::mean(channels[i])[0];
+                mean_gw += means[i];
+            }
+            mean_gw /= 3.0;
+            const double wb_blue_gain = mean_gw / means[0];
+            const double wb_green_gain = mean_gw / means[1];
+            const double wb_red_gain = mean_gw / means[2];
+            channels[0] *= wb_blue_gain;
+            channels[1] *= wb_green_gain;
+            channels[2] *= wb_red_gain;
+            std::cout << wb_blue_gain << ", " << wb_green_gain << ", " << wb_red_gain << std::endl;
+
+        } else {
+            channels[0] *= _wb_blue_gain;
+            channels[1] *= _wb_green_gain;
+            channels[2] *= _wb_red_gain;
+            std::cout << _wb_blue_gain << ", " << _wb_green_gain << ", " << _wb_red_gain << std::endl;
+        }
+        cv::merge(channels, image);
     }
 };
 
