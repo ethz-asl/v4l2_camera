@@ -23,10 +23,14 @@ public:
         3,
         8,
         true), // True indicates that this needs a conversion to RGB8
+    _wb_blue_gain(args.wb_blue_gain),
+    _wb_green_gain(args.wb_green_gain),
+    _wb_red_gain(args.wb_red_gain),
     _height(args.height),
     _width(args.width) {
         _rgb8_bytes = 3 * _height * _width;
         _reallocate_images();
+        std::cout << "OpenCV version: " << CV_VERSION << std::endl;
     }
 
     /// @brief Convert a BAYER_GRBG10 image to RGB8
@@ -43,27 +47,38 @@ public:
         _bayer_image.data = (uchar*)src;
 
         // Demosaic and convert to 8 bit mat
-        // This is somehow unexpected conversion, but maybe related to:
-        // https://github.com/opencv/opencv/issues/19629
+        // RVIZ and/or ROS expects BGR
         cv::cvtColor(_bayer_image, _rgb_image, cv::COLOR_BayerGR2BGR);
-        _rgb_image.convertTo(_rgb_image_8bit, CV_8U, _scaling_16_to_8);
+
+        // Directly shift the 16-bit pixel values to 8-bit
+        for (int y = 0; y < _rgb_image.rows; ++y) {
+            const cv::Vec3w* row_in = _rgb_image.ptr<cv::Vec3w>(y);
+            cv::Vec3b* row_out = _rgb_image_8bit.ptr<cv::Vec3b>(y);
+            for (int x = 0; x < _rgb_image.cols; ++x) {
+                row_out[x][0] = cv::saturate_cast<uchar>((row_in[x][0] >> 8) * _wb_blue_gain);
+                row_out[x][1] = cv::saturate_cast<uchar>((row_in[x][1] >> 8) * _wb_green_gain);
+                row_out[x][2] = cv::saturate_cast<uchar>((row_in[x][2] >> 8) * _wb_red_gain);
+            }
+        }
         std::memcpy(dest, _rgb_image_8bit.data, _rgb8_bytes);
     }
 
 private:
-    const double _scaling_16_to_8 = 256.0 / 65536.0;
     cv::Mat _bayer_image;
     cv::Mat _rgb_image_8bit;
     cv::Mat _rgb_image;
+    float _wb_blue_gain;
+    float _wb_green_gain;
+    float _wb_red_gain;
     int _height = 0;
     int _rgb8_bytes = 0;
     int _width = 0;
 
     void _reallocate_images() {
-        if (_bayer_image.rows != _height || _bayer_image.cols != _width ||
-            _rgb_image.rows != _width || _rgb_image.cols != _width) {
+        if (_bayer_image.rows != _height || _bayer_image.cols != _width) {
             _bayer_image = cv::Mat(_height, _width, CV_16UC1);
-            _rgb_image = cv::Mat(_height, _width, CV_16UC1);
+            _rgb_image = cv::Mat(_height, _width, CV_16UC3);
+            _rgb_image_8bit = cv::Mat(_height, _width, CV_8UC3);
         }
     }
 };

@@ -106,6 +106,9 @@ public:
     // enable/disable auto white balance temperature
     m_node.param("auto_white_balance", m_parameters.auto_white_balance, true);
     m_node.param("white_balance", m_parameters.white_balance, 4000);
+    m_node.param("wb_blue_gain", m_parameters.wb_blue_gain, 1.0f);
+    m_node.param("wb_green_gain", m_parameters.wb_green_gain, 1.0f);
+    m_node.param("wb_red_gain", m_parameters.wb_red_gain, 1.0f);
 
     // load the camera info
     m_node.param("camera_frame_id", m_image.header.frame_id, std::string("head_camera"));
@@ -236,13 +239,8 @@ public:
     //   m_camera.set_v4l_parameter("white_balance_temperature", m_parameters.white_balance);
     // }
 
-    // check auto exposure
-    if (!m_parameters.autoexposure) {
-      // turn down exposure control (from max of 3)
-      m_camera.set_v4l_parameter("exposure", m_parameters.exposure);
-      // change the exposure level
-      // m_camera.set_v4l_parameter("m_exposureabsolute", m_parameters.exposure);
-    }
+    // Sheck auto exposure
+    m_camera.set_v4l_parameter("exposure", m_parameters.exposure);
 
     if (m_parameters.framerate >= 0) {
       m_camera.set_v4l_parameter("frame_rate", m_parameters.framerate);

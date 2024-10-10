@@ -133,6 +133,9 @@ typedef struct
   bool auto_white_balance;
   bool autoexposure;
   bool autofocus;
+  float wb_blue_gain;
+  float wb_green_gain;
+  float wb_red_gain;
 } parameters_t;
 
 typedef struct
@@ -377,6 +380,9 @@ public:
         parameters.image_height,
         m_image.number_of_pixels,
         parameters.av_device_format,
+        parameters.wb_blue_gain,
+        parameters.wb_green_gain,
+        parameters.wb_red_gain
       });
 
     // Look for specified pixel format
@@ -421,10 +427,12 @@ private:
   int64_t m_buffer_time_us;
   bool m_is_capturing;
   int m_framerate;
+  int m_exposure;
   const time_t m_epoch_time_shift_us;
   std::vector<capture_format_t> m_supported_formats;
 
   int get_control_id_from_str(std::string control_str);
+  int set_control_id_to_value(int id, int value);
 };
 
 }  // namespace usb_cam

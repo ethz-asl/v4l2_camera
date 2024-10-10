@@ -61,7 +61,7 @@ UsbCam::UsbCam()
 : m_device_name(), m_io(io_method_t::IO_METHOD_MMAP), m_fd(-1),
   m_number_of_buffers(4), m_buffers(new usb_cam::utils::buffer[m_number_of_buffers]), m_image(),
   m_avframe(NULL), m_avcodec(NULL), m_avoptions(NULL),
-  m_avcodec_context(NULL), m_is_capturing(false), m_framerate(0),
+  m_avcodec_context(NULL), m_is_capturing(false), m_framerate(0), m_exposure(0),
   m_epoch_time_shift_us(usb_cam::utils::get_epoch_time_shift_us()), m_supported_formats()
 {}
 
@@ -390,6 +390,26 @@ int UsbCam::get_control_id_from_str(std::string control_str) {
     return id;
 }
 
+int UsbCam::set_control_id_to_value(int id, int value) {
+  int ret = -1;
+  if (id > 0) {
+      struct v4l2_control control;
+      memset(&control, 0, sizeof(control));
+
+      // TODO: Could check min/max
+      control.id = id;
+      control.value = static_cast<int>(value);
+      ret = ioctl(m_fd, VIDIOC_S_CTRL, &control);
+      if (ret == -1) {
+          std::cerr << "Error setting " << id << " to " << value << std::endl;
+
+      } else {
+          std::cout << "Set " << id << " to " << value << std::endl;
+      }
+  }
+  return ret;
+}
+
 void UsbCam::init_device()
 {
   struct v4l2_capability cap;
@@ -499,6 +519,9 @@ void UsbCam::init_device()
   //     }
   // }
 
+  const int exposure_id = get_control_id_from_str("Exposure");
+  set_control_id_to_value(exposure_id, m_exposure);
+
   switch (m_io) {
     case io_method_t::IO_METHOD_READ:
       init_read();
@@ -564,6 +587,7 @@ void UsbCam::configure(
   m_image.set_bytes_per_line();
   m_image.set_size_in_bytes();
   m_framerate = parameters.framerate;
+  m_exposure = parameters.exposure;
 
   init_device();
 }

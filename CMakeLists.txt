@@ -63,44 +63,18 @@ target_link_libraries(${PROJECT_NAME}
   ${swscale_LIBRARIES}
   ${OpenCV_LIBRARIES})
 
-# Remove once ROS 1 Noetic is deprecated
-if($ENV{ROS_VERSION} EQUAL 1)
-  catkin_package(
-    INCLUDE_DIRS include
-    LIBRARIES ${PROJECT_NAME}
-  )
+catkin_package(
+  INCLUDE_DIRS include
+  LIBRARIES ${PROJECT_NAME}
+)
 
-  add_executable(${PROJECT_NAME}_node src/ros1/usb_cam_node.cpp)
-  target_link_libraries(${PROJECT_NAME}_node
-    ${PROJECT_NAME}
-    ${catkin_LIBRARIES}
-  )
-  target_include_directories(${PROJECT_NAME}_node PUBLIC
-    ${catkin_INCLUDE_DIRS})
-else()
-  ament_export_libraries(${PROJECT_NAME})
-
-  ## Declare a ROS 2 composible node as a library
-  ament_auto_add_library(${PROJECT_NAME}_node SHARED
-    src/ros2/usb_cam_node.cpp
-  )
-
-  target_link_libraries(${PROJECT_NAME}_node
-    ${PROJECT_NAME})
-
-  ## Use node to generate an executable
-  rclcpp_components_register_node(${PROJECT_NAME}_node
-    PLUGIN "usb_cam::UsbCamNode"
-    EXECUTABLE ${PROJECT_NAME}_node_exe
-  )
-  if(SANITIZE)
-    target_compile_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fsanitize=leak)
-    target_link_libraries(${PROJECT_NAME} -fsanitize=address -fsanitize=leak)
-    target_compile_options(${PROJECT_NAME}_node PUBLIC -fsanitize=address -fsanitize=leak)
-    target_link_libraries(${PROJECT_NAME}_node -fsanitize=address -fsanitize=leak)
-    target_link_libraries(${PROJECT_NAME}_node_exe -fsanitize=address -fsanitize=leak)
-  endif()
-endif()
+add_executable(${PROJECT_NAME}_node src/usb_cam_node.cpp)
+target_link_libraries(${PROJECT_NAME}_node
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+)
+target_include_directories(${PROJECT_NAME}_node PUBLIC
+  ${catkin_INCLUDE_DIRS})
 
 if(BUILD_TESTING)
   if($ENV{ROS_VERSION} EQUAL 2)
