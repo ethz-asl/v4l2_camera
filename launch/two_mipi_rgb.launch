@@ -1,7 +1,7 @@
 
 <launch>
   <!-- launch-prefix="gdb -ex run -/-args" -->
-  <node name="usb_cam" pkg="cam0" type="usb_cam_node" output="screen" >
+  <node name="cam0" pkg="usb_cam" type="usb_cam_node" output="screen" >
     <param name="video_device" value="/dev/video0" />
     <param name="image_width" value="1920" />
     <param name="image_height" value="1200" />
@@ -19,7 +19,7 @@
     <param name="wb_red_gain" value="1.18"/>
   </node>
 
-  <node name="usb_cam" pkg="cam1" type="usb_cam_node" output="screen" >
+  <node name="cam1" pkg="usb_cam" type="usb_cam_node" output="screen" >
     <param name="video_device" value="/dev/video1" />
     <param name="image_width" value="1920" />
     <param name="image_height" value="1200" />
