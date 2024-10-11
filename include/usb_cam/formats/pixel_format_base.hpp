@@ -55,9 +55,9 @@ typedef struct
   int height = 480;
   size_t pixels = 640 * 480;
   std::string av_device_format_str = "AV_PIX_FMT_YUV422P";
-  double wb_blue_gain = 1.0;
-  double wb_green_gain = 1.0;
-  double wb_red_gain = 1.0;
+  float wb_blue_gain = 1.0f;
+  float wb_green_gain = 1.0f;
+  float wb_red_gain = 1.0f;
 } format_arguments_t;
 
 

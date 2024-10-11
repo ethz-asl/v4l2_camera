@@ -133,9 +133,9 @@ typedef struct
   bool auto_white_balance;
   bool autoexposure;
   bool autofocus;
-  double wb_blue_gain;
-  double wb_green_gain;
-  double wb_red_gain;
+  float wb_blue_gain;
+  float wb_green_gain;
+  float wb_red_gain;
 } parameters_t;
 
 typedef struct
@@ -313,7 +313,6 @@ public:
     if (m_supported_formats.size() == 0) {
       this->get_supported_formats();
     }
-    // std::cout << "Supported format length: " << m_supported_formats.size() << std::endl;
 
     return m_supported_formats;
   }
