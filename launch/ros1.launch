@@ -14,8 +14,8 @@
     <param name="framerate" value="false"/>
 
   <!-- Hardcore guess TBD actual calibration -->
-    <param name="wb_blue_gain" value="0.0"/>
-    <param name="wb_green_gain" value="0.0"/>
-    <param name="wb_red_gain" value="0.0"/>
+    <param name="wb_blue_gain" value="0.98"/>
+    <param name="wb_green_gain" value="0.88"/>
+    <param name="wb_red_gain" value="1.18"/>
   </node>
 </launch>

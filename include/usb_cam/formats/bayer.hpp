@@ -5,6 +5,7 @@
 #include "usb_cam/formats/pixel_format_base.hpp"
 #include "usb_cam/formats/utils.hpp"
 
+#include <deque>
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/opencv.hpp>
@@ -61,7 +62,6 @@ public:
         if (_use_cuda) {
             _gpu_bayer_image.upload(_bayer_image);
             cv::cuda::cvtColor(_gpu_bayer_image, _gpu_rgb_image, cv::COLOR_BayerGR2BGR);
-            // TMP
             _gpu_rgb_image.download(_rgb_image);
 
         } else {
@@ -69,43 +69,48 @@ public:
         }
 
         // Directly shift the 16-bit pixel values to 8-bit
-        // TODO: Casting on GPU?
+        // TODO: Casting on GPU? Would be possible on opencv 4.10.0
         for (int y = 0; y < _rgb_image.rows; ++y) {
             const cv::Vec3w* row_in = _rgb_image.ptr<cv::Vec3w>(y);
             cv::Vec3b* row_out = _rgb_image_8bit.ptr<cv::Vec3b>(y);
             for (int x = 0; x < _rgb_image.cols; ++x) {
-                row_out[x][0] = cv::saturate_cast<uchar>((row_in[x][0] >> 8));
-                row_out[x][1] = cv::saturate_cast<uchar>((row_in[x][1] >> 8));
-                row_out[x][2] = cv::saturate_cast<uchar>((row_in[x][2] >> 8));
+                row_out[x][0] = static_cast<uchar>((row_in[x][0] >> 8));
+                row_out[x][1] = static_cast<uchar>((row_in[x][1] >> 8));
+                row_out[x][2] = static_cast<uchar>((row_in[x][2] >> 8));
             }
         }
 
         // Apply gains from launch file if specified
         // otherwise runs auto calibration grayworldWB
-        _gray_world_wb(_rgb_image_8bit);
+        _gray_world_wb(_rgb_image_8bit, _rgb_image_out);
 
         // TODO: If casting and wb is done on gpu
         // if (_use_cuda && false) {
         //     _gpu_rgb_image_8bit.download(_rgb_image_8bit);
         // }
-        std::memcpy(dest, _rgb_image_8bit.data, _rgb8_bytes);
+        std::memcpy(dest, _rgb_image_out.data, _rgb8_bytes);
     }
 
 private:
     bool _use_cuda = false;
+    const int _wb_N = 100;
     cv::cuda::GpuMat _gpu_bayer_image;
     cv::cuda::GpuMat _gpu_rgb_image_8bit;
     cv::cuda::GpuMat _gpu_rgb_image;
     cv::Mat _bayer_image;
     cv::Mat _rgb_image_8bit;
+    cv::Mat _rgb_image_out;
     cv::Mat _rgb_image;
     cv::Ptr<cv::xphoto::WhiteBalancer> _wb;
-    double _wb_blue_gain;
-    double _wb_green_gain;
-    double _wb_red_gain;
+    float _wb_blue_gain;
+    float _wb_green_gain;
+    float _wb_red_gain;
     int _height = 0;
     int _rgb8_bytes = 0;
     int _width = 0;
+    std::deque<float> _wb_blue_gains;
+    std::deque<float> _wb_green_gains;
+    std::deque<float> _wb_red_gains;
 
     void _reallocate_images() {
         if (_bayer_image.rows != _height || _bayer_image.cols != _width) {
@@ -121,34 +126,62 @@ private:
         }
     }
 
-    void _gray_world_wb(cv::Mat& image) {
+    void _gray_world_wb(cv::Mat& in, cv::Mat& out) {
         std::vector<cv::Mat> channels;
-        cv::split(image, channels);
+        cv::split(in, channels);
+        float avg_blue_gain = 0.0f;
+        float avg_green_gain = 0.0f;
+        float avg_red_gain = 0.0f;
 
-        if (_wb_blue_gain < 1e-6 || _wb_green_gain < 1e-6 || _wb_red_gain < 1e-6) {
-            double means[3];
-            double mean_gw;
+        if (_wb_blue_gain < 1e-6f || _wb_green_gain < 1e-6f || _wb_red_gain < 1e-6f) {
+            float means[3];
+            float mean_gw;
+
             for (size_t i=0; i < 3; i++) {
                 means[i] = cv::mean(channels[i])[0];
                 mean_gw += means[i];
             }
             mean_gw /= 3.0;
-            const double wb_blue_gain = mean_gw / means[0];
-            const double wb_green_gain = mean_gw / means[1];
-            const double wb_red_gain = mean_gw / means[2];
-            channels[0] *= wb_blue_gain;
-            channels[1] *= wb_green_gain;
-            channels[2] *= wb_red_gain;
-            std::cout << wb_blue_gain << ", " << wb_green_gain << ", " << wb_red_gain << std::endl;
+
+            const float wb_blue_gain = mean_gw / means[0];
+            const float wb_green_gain = mean_gw / means[1];
+            const float wb_red_gain = mean_gw / means[2];
+
+            // Add the new gains to the deque and maintain window size N
+            if (_wb_blue_gains.size() >= _wb_N) _wb_blue_gains.pop_front();  // Remove oldest if at limit
+            if (_wb_green_gains.size() >= _wb_N) _wb_green_gains.pop_front();
+            if (_wb_red_gains.size() >= _wb_N) _wb_red_gains.pop_front();
+
+            _wb_blue_gains.push_back(wb_blue_gain);
+            _wb_green_gains.push_back(wb_green_gain);
+            _wb_red_gains.push_back(wb_red_gain);
+
+            // Compute the average gains over the window
+            avg_blue_gain = _compute_average(_wb_blue_gains);
+            avg_green_gain = _compute_average(_wb_green_gains);
+            avg_red_gain = _compute_average(_wb_red_gains);
+            std::cout << avg_blue_gain << ", " << avg_green_gain << ", " << avg_red_gain << std::endl;
 
         } else {
-            channels[0] *= _wb_blue_gain;
-            channels[1] *= _wb_green_gain;
-            channels[2] *= _wb_red_gain;
-            std::cout << _wb_blue_gain << ", " << _wb_green_gain << ", " << _wb_red_gain << std::endl;
+            avg_blue_gain = _wb_blue_gain;
+            avg_green_gain = _wb_green_gain;
+            avg_red_gain = _wb_red_gain;
         }
-        cv::merge(channels, image);
+
+        // Apply the averaged gains
+        channels[0] *= avg_blue_gain;
+        channels[1] *= avg_green_gain;
+        channels[2] *= avg_red_gain;
+        cv::merge(channels, out);
     }
+
+    float _compute_average(const std::deque<float>& gains) {
+        float sum = 0.0f;
+        for (float gain : gains) {
+            sum += gain;
+        }
+        return sum / gains.size();
+}
 };
 
 }  // namespace formats
