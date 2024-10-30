@@ -946,7 +946,6 @@ const std::unordered_map<std::string, AVPixelFormat> STR_2_AVPIXFMT = {
 /// @return Pixel format enum corresponding to a given name
 inline AVPixelFormat get_av_pixel_format_from_string(const std::string & str)
 {
-  std::cout << "STR = " << str << std::endl;
   std::string upperCaseStr = str;
   std::transform(upperCaseStr.begin(), upperCaseStr.end(), upperCaseStr.begin(), ::toupper);
 

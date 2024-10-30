@@ -61,7 +61,7 @@ UsbCam::UsbCam()
 : m_device_name(), m_io(io_method_t::IO_METHOD_MMAP), m_fd(-1),
   m_number_of_buffers(4), m_buffers(new usb_cam::utils::buffer[m_number_of_buffers]), m_image(),
   m_avframe(NULL), m_avcodec(NULL), m_avoptions(NULL),
-  m_avcodec_context(NULL), m_is_capturing(false), m_framerate(0),
+  m_avcodec_context(NULL), m_is_capturing(false), m_framerate(0), m_exposure(0),
   m_epoch_time_shift_us(usb_cam::utils::get_epoch_time_shift_us()), m_supported_formats()
 {}
 
@@ -371,6 +371,45 @@ void UsbCam::init_userp()
   }
 }
 
+int UsbCam::get_control_id_from_str(std::string control_str) {
+    // Search for the ctrl_id
+    int id = -1;
+    int ret;
+    struct v4l2_queryctrl queryctrl;
+    memset(&queryctrl, 0, sizeof(queryctrl));
+
+    queryctrl.id = V4L2_CID_BASE;
+    while (queryctrl.id < 0x990000) {
+        ret = ioctl(m_fd, VIDIOC_QUERYCTRL, &queryctrl);
+        if ((ret == 0) && !(queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) && strstr(reinterpret_cast<const char*>(queryctrl.name), control_str.c_str())) {
+            id = queryctrl.id;
+            break;
+        }
+        queryctrl.id++;
+    }
+    return id;
+}
+
+int UsbCam::set_control_id_to_value(int id, int value) {
+  int ret = -1;
+  if (id > 0) {
+      struct v4l2_control control;
+      memset(&control, 0, sizeof(control));
+
+      // TODO: Could check min/max
+      control.id = id;
+      control.value = static_cast<int>(value);
+      ret = ioctl(m_fd, VIDIOC_S_CTRL, &control);
+      if (ret == -1) {
+          std::cerr << "Error setting " << id << " to " << value << std::endl;
+
+      } else {
+          std::cout << "Set " << id << " to " << value << std::endl;
+      }
+  }
+  return ret;
+}
+
 void UsbCam::init_device()
 {
   struct v4l2_capability cap;
@@ -402,7 +441,7 @@ void UsbCam::init_device()
       }
       break;
     case io_method_t::IO_METHOD_UNKNOWN:
-      throw std::invalid_argument("Unsupported IO method specified");
+      throw std::invalid_argument("Unsupported IO method `");
   }
 
   /* Select video input, video standard and tune here. */
@@ -441,24 +480,8 @@ void UsbCam::init_device()
     throw strerror(errno);
   }
 
-  struct v4l2_streamparm stream_params;
-  memset(&stream_params, 0, sizeof(stream_params));
-  stream_params.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_G_PARM), &stream_params) < 0) {
-    throw strerror(errno);
-  }
-
-  if (!stream_params.parm.capture.capability && V4L2_CAP_TIMEPERFRAME) {
-    throw "V4L2_CAP_TIMEPERFRAME not supported";
-  }
-
-  // TODO(lucasw) need to get list of valid numerator/denominator pairs
-  // and match closest to what user put in.
-  stream_params.parm.capture.timeperframe.numerator = 1;
-  stream_params.parm.capture.timeperframe.denominator = m_framerate;
-  if (usb_cam::utils::xioctl(m_fd, static_cast<int>(VIDIOC_S_PARM), &stream_params) < 0) {
-    throw std::invalid_argument("Couldn't set camera framerate");
-  }
+  const int exposure_id = get_control_id_from_str("Exposure");
+  set_control_id_to_value(exposure_id, m_exposure);
 
   switch (m_io) {
     case io_method_t::IO_METHOD_READ:
@@ -525,6 +548,7 @@ void UsbCam::configure(
   m_image.set_bytes_per_line();
   m_image.set_size_in_bytes();
   m_framerate = parameters.framerate;
+  m_exposure = parameters.exposure;
 
   init_device();
 }
@@ -575,37 +599,57 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
 
   current_format->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   current_format->index = 0;
+
   for (current_format->index = 0;
-    usb_cam::utils::xioctl(
-      m_fd, VIDIOC_ENUM_FMT, current_format) == 0;
-    ++current_format->index)
+       usb_cam::utils::xioctl(m_fd, VIDIOC_ENUM_FMT, current_format) == 0;
+       ++current_format->index)
   {
     current_size->index = 0;
     current_size->pixel_format = current_format->pixelformat;
-    std::cout << "test: "<<current_size->pixel_format << std::endl;
+
+    // std::cout << "Pixel format: " << pixel_format_to_string(current_size->pixel_format) << std::endl;
+
     for (current_size->index = 0;
-      usb_cam::utils::xioctl(
-        m_fd, VIDIOC_ENUM_FRAMESIZES, current_size) == 0;
-      ++current_size->index)
+         usb_cam::utils::xioctl(m_fd, VIDIOC_ENUM_FRAMESIZES, current_size) == 0;
+         ++current_size->index)
     {
       current_interval->index = 0;
       current_interval->pixel_format = current_size->pixel_format;
       current_interval->width = current_size->discrete.width;
       current_interval->height = current_size->discrete.height;
-      std::cout << "\twidth" << current_interval->width << std::endl;
-      for (current_interval->index = 0;
-        usb_cam::utils::xioctl(
-          m_fd, VIDIOC_ENUM_FRAMEINTERVALS, current_interval) == 0;
-        ++current_interval->index)
-      {
-	std::cout <<"\t\t type"<< current_interval->type<<std::endl;
-        if (current_interval->type == V4L2_FRMIVAL_TYPE_DISCRETE) {
-          capture_format_t capture_format;
-          capture_format.format = *current_format;
-          capture_format.v4l2_fmt = *current_interval;
-          m_supported_formats.push_back(capture_format);
+
+      // Try to enumerate frame intervals
+      int ret = usb_cam::utils::xioctl(m_fd, VIDIOC_ENUM_FRAMEINTERVALS, current_interval);
+      if (ret == 0) {
+        for (current_interval->index = 0;
+             ret == 0;
+             ++current_interval->index)
+        {
+          if (current_interval->type == V4L2_FRMIVAL_TYPE_DISCRETE) {
+            capture_format_t capture_format;
+            capture_format.format = *current_format;
+            capture_format.v4l2_fmt = *current_interval;
+            m_supported_formats.push_back(capture_format);
+          }
+          ret = usb_cam::utils::xioctl(m_fd, VIDIOC_ENUM_FRAMEINTERVALS, current_interval);
         }
-      }  // interval loop
+      } else {
+        capture_format_t capture_format;
+        capture_format.format = *current_format;
+
+        // Populate v4l2_fmt with default values if intervals are not available
+        memset(&capture_format.v4l2_fmt, 0, sizeof(v4l2_frmivalenum));
+        capture_format.v4l2_fmt.pixel_format = current_size->pixel_format;
+        capture_format.v4l2_fmt.width = current_size->discrete.width;
+        capture_format.v4l2_fmt.height = current_size->discrete.height;
+
+        // Set a default or assumed frame interval if needed
+        capture_format.v4l2_fmt.type = V4L2_FRMIVAL_TYPE_DISCRETE;
+        capture_format.v4l2_fmt.discrete.numerator = 1;
+        capture_format.v4l2_fmt.discrete.denominator = m_framerate;
+
+        m_supported_formats.push_back(capture_format);
+      }
     }  // size loop
   }  // fmt loop
 
@@ -615,6 +659,21 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
 
   return m_supported_formats;
 }
+
+
+
+// ETHZ ASL: Add pixel format conversion
+std::string UsbCam::pixel_format_to_string(uint32_t pixel_format)
+{
+    char fourcc[5];  // Four characters plus null-terminator
+    fourcc[0] = pixel_format & 0xFF;        // First byte
+    fourcc[1] = (pixel_format >> 8) & 0xFF; // Second byte
+    fourcc[2] = (pixel_format >> 16) & 0xFF;// Third byte
+    fourcc[3] = (pixel_format >> 24) & 0xFF;// Fourth byte
+    fourcc[4] = '\0';                       // Null-terminator for string
+    return std::string(fourcc);
+}
+// ETHZ ASL: End
 
 void UsbCam::grab_image()
 {

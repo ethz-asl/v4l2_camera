@@ -89,6 +89,7 @@ const char BAYER_RGGB8[] = "bayer_rggb8";
 const char BAYER_BGGR8[] = "bayer_bggr8";
 const char BAYER_GBRG8[] = "bayer_gbrg8";
 const char BAYER_GRBG8[] = "bayer_grbg8";
+const char BAYER_GRBG10[] = "bayer_grbg10";
 const char BAYER_RGGB16[] = "bayer_rggb16";
 const char BAYER_BGGR16[] = "bayer_bggr16";
 const char BAYER_GBRG16[] = "bayer_gbrg16";

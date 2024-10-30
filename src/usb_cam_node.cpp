@@ -106,6 +106,9 @@ public:
     // enable/disable auto white balance temperature
     m_node.param("auto_white_balance", m_parameters.auto_white_balance, true);
     m_node.param("white_balance", m_parameters.white_balance, 4000);
+    m_node.param("wb_blue_gain", m_parameters.wb_blue_gain, 0.0f);
+    m_node.param("wb_green_gain", m_parameters.wb_green_gain, 0.0f);
+    m_node.param("wb_red_gain", m_parameters.wb_red_gain, 0.0f);
 
     // load the camera info
     m_node.param("camera_frame_id", m_image.header.frame_id, std::string("head_camera"));
@@ -147,8 +150,6 @@ public:
     }
 
     // setup camera according to new interface.
-    std::cout << m_parameters.pixel_format_name << std::endl;
-    std::cout << m_parameters.av_device_format << std::endl;
     m_camera.configure(m_parameters, io_method);
 
     set_v4l2_params();
@@ -209,52 +210,11 @@ public:
 
   void set_v4l2_params()
   {
-    // set camera parameters
-    if (m_parameters.brightness >= 0) {
-      m_camera.set_v4l_parameter("brightness", m_parameters.brightness);
-    }
+    // Sheck auto exposure
+    m_camera.set_v4l_parameter("exposure", m_parameters.exposure);
 
-    if (m_parameters.contrast >= 0) {
-      m_camera.set_v4l_parameter("contrast", m_parameters.contrast);
-    }
-
-    if (m_parameters.saturation >= 0) {
-      m_camera.set_v4l_parameter("saturation", m_parameters.saturation);
-    }
-
-    if (m_parameters.sharpness >= 0) {
-      m_camera.set_v4l_parameter("sharpness", m_parameters.sharpness);
-    }
-
-    if (m_parameters.gain >= 0) {
-      m_camera.set_v4l_parameter("gain", m_parameters.gain);
-    }
-
-    // check auto white balance
-    if (m_parameters.auto_white_balance) {
-      m_camera.set_v4l_parameter("white_balance_temperature_auto", 1);
-    } else {
-      m_camera.set_v4l_parameter("white_balance_temperature_auto", 0);
-      m_camera.set_v4l_parameter("white_balance_temperature", m_parameters.white_balance);
-    }
-
-    // check auto exposure
-    if (!m_parameters.autoexposure) {
-      // turn down exposure control (from max of 3)
-      m_camera.set_v4l_parameter("m_exposureauto", 1);
-      // change the exposure level
-      m_camera.set_v4l_parameter("m_exposureabsolute", m_parameters.exposure);
-    }
-
-    // check auto focus
-    if (m_parameters.autofocus) {
-      m_camera.set_auto_focus(1);
-      m_camera.set_v4l_parameter("m_focusauto", 1);
-    } else {
-      m_camera.set_v4l_parameter("m_focusauto", 0);
-      if (m_parameters.focus >= 0) {
-        m_camera.set_v4l_parameter("m_focusabsolute", m_parameters.focus);
-      }
+    if (m_parameters.framerate >= 0) {
+      m_camera.set_v4l_parameter("frame_rate", m_parameters.framerate);
     }
   }
 };

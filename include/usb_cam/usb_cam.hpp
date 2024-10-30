@@ -53,6 +53,7 @@ extern "C" {
 #include "usb_cam/formats/uyvy.hpp"
 #include "usb_cam/formats/yuyv.hpp"
 #include "usb_cam/formats/m420.hpp"
+#include "usb_cam/formats/bayer.hpp"
 
 
 namespace usb_cam
@@ -74,6 +75,7 @@ using usb_cam::formats::Y102MONO8;
 using usb_cam::formats::RAW_MJPEG;
 using usb_cam::formats::MJPEG2RGB;
 using usb_cam::formats::M4202RGB;
+using usb_cam::formats::BAYER_GRBG10;
 
 
 /// @brief list all supported formats that this driver supports
@@ -92,6 +94,7 @@ std::vector<std::shared_ptr<pixel_format_base>> driver_supported_formats(
     std::make_shared<RAW_MJPEG>(args),
     std::make_shared<MJPEG2RGB>(args),
     std::make_shared<M4202RGB>(args),
+    std::make_shared<BAYER_GRBG10>(args),
   };
   return fmts;
 }
@@ -130,6 +133,9 @@ typedef struct
   bool auto_white_balance;
   bool autoexposure;
   bool autofocus;
+  float wb_blue_gain;
+  float wb_green_gain;
+  float wb_red_gain;
 } parameters_t;
 
 typedef struct
@@ -195,6 +201,10 @@ public:
   void get_image(char * destination);
 
   std::vector<capture_format_t> get_supported_formats();
+
+  // ETHZ ASL: Add pixel format conversion
+  std::string pixel_format_to_string(uint32_t pixel_format);
+  // ETHZ ASL: End
 
   // enables/disable auto focus
   bool set_auto_focus(int value);
@@ -321,6 +331,8 @@ public:
     for (auto driver_fmt : driver_supported_formats(args)) {
       if (driver_fmt->name() == args.name) {
         found_driver_format = driver_fmt;
+        std::cout << driver_fmt->name() << " supported by this ROS driver" << std::endl;
+        break;
       }
     }
 
@@ -340,12 +352,13 @@ public:
       // Always list the devices supported formats for the user
       std::cout << "\t" << fmt.format.description << " ";
       std::cout << fmt.v4l2_fmt.width << " x " << fmt.v4l2_fmt.height << " (";
-      std::cout << fmt.v4l2_fmt.discrete.denominator / fmt.v4l2_fmt.discrete.numerator << " Hz)";
+      std::cout << fmt.v4l2_fmt.discrete.denominator / fmt.v4l2_fmt.discrete.numerator << " Hz) ";
       std::cout << std::endl;
 
       if (fmt.v4l2_fmt.pixel_format == found_driver_format->v4l2()) {
         result = true;
         m_image.pixel_format = found_driver_format;
+        // std::cout << "set_pixel_format: Success" << std::endl;
       }
     }
 
@@ -366,13 +379,10 @@ public:
         parameters.image_height,
         m_image.number_of_pixels,
         parameters.av_device_format,
+        parameters.wb_blue_gain,
+        parameters.wb_green_gain,
+        parameters.wb_red_gain
       });
-
-    std::cout << parameters.pixel_format_name << std::endl;
-    std::cout << parameters.image_width << std::endl;
-    std::cout << parameters.image_height << std::endl;
-    std::cout << parameters.av_device_format << std::endl;
-    std::cout << m_image.number_of_pixels << std::endl;
 
     // Look for specified pixel format
     if (!this->set_pixel_format(format_args)) {
@@ -416,8 +426,12 @@ private:
   int64_t m_buffer_time_us;
   bool m_is_capturing;
   int m_framerate;
+  int m_exposure;
   const time_t m_epoch_time_shift_us;
   std::vector<capture_format_t> m_supported_formats;
+
+  int get_control_id_from_str(std::string control_str);
+  int set_control_id_to_value(int id, int value);
 };
 
 }  // namespace usb_cam

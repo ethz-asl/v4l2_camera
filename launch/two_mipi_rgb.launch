@@ -1,0 +1,39 @@
+
+<launch>
+  <!-- launch-prefix="gdb -ex run -/-args" -->
+  <node name="cam0" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="video_device" value="/dev/video0" />
+    <param name="image_width" value="1920" />
+    <param name="image_height" value="1200" />
+    <param name="pixel_format" value="bayer_grbg10" />
+    <param name="av_device_format" value="GRAY16BE" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap"/>
+    <param name="exposure" value="500"/>
+    <param name="autoexposure" value="false"/>
+    <param name="framerate" value="30"/>
+
+  <!-- Hardcore guess TBD actual calibration, 0.98, 0.88, 1.18 -->
+    <param name="wb_blue_gain" value="0.98"/>
+    <param name="wb_green_gain" value="0.88"/>
+    <param name="wb_red_gain" value="1.18"/>
+  </node>
+
+  <node name="cam1" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <param name="video_device" value="/dev/video1" />
+    <param name="image_width" value="1920" />
+    <param name="image_height" value="1200" />
+    <param name="pixel_format" value="bayer_grbg10" />
+    <param name="av_device_format" value="GRAY16BE" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap"/>
+    <param name="exposure" value="500"/>
+    <param name="autoexposure" value="false"/>
+    <param name="framerate" value="30"/>
+
+  <!-- Hardcore guess TBD actual calibration, 0.98, 0.88, 1.18 -->
+    <param name="wb_blue_gain" value="0.98"/>
+    <param name="wb_green_gain" value="0.88"/>
+    <param name="wb_red_gain" value="1.18"/>
+  </node>
+</launch>
