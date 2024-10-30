@@ -2,6 +2,9 @@
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xphoto.hpp>
+#include <ros/console.h>
+#include <Eigen/Dense>
+#include <deque>
 
 namespace usb_cam
 {
@@ -18,10 +21,8 @@ public:
         usb_cam::constants::RGB8,
         3,
         8,
-        true),  // True indicates that this needs a conversion to RGB8
-    _wb_blue_gain(args.wb_blue_gain),
-    _wb_green_gain(args.wb_green_gain),
-    _wb_red_gain(args.wb_red_gain),
+        true),
+    _wb_gains(args.wb_blue_gain, args.wb_green_gain, args.wb_red_gain),
     _height(args.height),
     _use_cuda(cv::cuda::getCudaEnabledDeviceCount() > 0),
     _width(args.width) {
@@ -34,19 +35,14 @@ public:
         }
 
         _wb = cv::xphoto::createGrayworldWB();
-        _use_grayworld_wb = (_wb_blue_gain < 1e-6f || _wb_green_gain < 1e-6f || _wb_red_gain < 1e-6f);
+        _use_grayworld_wb = (_wb_gains[0] < 1e-6f || _wb_gains[1] < 1e-6f || _wb_gains[2] < 1e-6f);
     }
 
-    /// @brief Convert a BAYER_GRBG10 image to RGB8 with WB
-    /// @param src pointer to source BAYER_GRBG10 image
-    /// @param dest pointer to destination RGB8 image
-    /// @param bytes_used number of bytes used by source image
     void convert(const char* &src, char* &dest, const int& bytes_used) override {
         (void)bytes_used;
         _reallocate_images();
         _bayer_image.data = (uchar*)src;
 
-        // Demosaic and convert to 8-bit with white balance scaling
         if (_use_cuda && !_use_grayworld_wb) {
             _gpu_bayer_image.upload(_bayer_image);
             cv::cuda::cvtColor(_gpu_bayer_image, _gpu_rgb_image, cv::COLOR_BayerGR2BGR);
@@ -58,7 +54,6 @@ public:
             _apply_white_balance_cpu();
         }
 
-        // Copy the result to the destination buffer
         std::memcpy(dest, _rgb_image_out.data, _rgb8_bytes);
     }
 
@@ -74,17 +69,12 @@ private:
     cv::Mat _rgb_image_out;
     cv::Mat _rgb_image;
     cv::Ptr<cv::xphoto::WhiteBalancer> _wb;
-    float _wb_blue_gain;
-    float _wb_green_gain;
-    float _wb_red_gain;
+    Eigen::Vector3d _wb_gains;
     int _height = 0;
     int _rgb8_bytes = 0;
     int _width = 0;
-    std::deque<float> _wb_blue_gains;
-    std::deque<float> _wb_green_gains;
-    std::deque<float> _wb_red_gains;
+    std::deque<Eigen::Vector3d> _wb_gain_history;
 
-    // Allocate/Reallocate images if needed
     void _reallocate_images() {
         if (_bayer_image.rows != _height || _bayer_image.cols != _width) {
             _bayer_image = cv::Mat(_height, _width, CV_16UC1);
@@ -100,14 +90,12 @@ private:
         }
     }
 
-    // Apply white balance and 16-bit to 8-bit conversion on CPU
     void _apply_white_balance_cpu() {
         std::vector<cv::Mat> channels;
         cv::split(_rgb_image, channels);
-        float avg_blue_gain = 0.0f, avg_green_gain = 0.0f, avg_red_gain = 0.0f;
+        Eigen::Vector3d avg_gains(0.0, 0.0, 0.0);
 
         if (_use_grayworld_wb) {
-            // Compute gray world white balance
             float means[3] = { 0.0f }, mean_gw = 0.0f;
             for (size_t i = 0; i < 3; ++i) {
                 means[i] = cv::mean(channels[i])[0];
@@ -115,64 +103,47 @@ private:
             }
             mean_gw /= 3.0f;
 
-            // Compute gains
-            float wb_blue_gain = mean_gw / means[0];
-            float wb_green_gain = mean_gw / means[1];
-            float wb_red_gain = mean_gw / means[2];
+            Eigen::Vector3d wb_gains(mean_gw / means[0], mean_gw / means[1], mean_gw / means[2]);
+            _add_gain_to_history(wb_gains);
 
-            // Maintain average gains using deque
-            _add_gain_to_deque(_wb_blue_gains, wb_blue_gain);
-            _add_gain_to_deque(_wb_green_gains, wb_green_gain);
-            _add_gain_to_deque(_wb_red_gains, wb_red_gain);
-
-            avg_blue_gain = _compute_average(_wb_blue_gains);
-            avg_green_gain = _compute_average(_wb_green_gains);
-            avg_red_gain = _compute_average(_wb_red_gains);
+            avg_gains = _compute_average_gains();
 
         } else {
-            avg_blue_gain = _wb_blue_gain;
-            avg_green_gain = _wb_green_gain;
-            avg_red_gain = _wb_red_gain;
+            avg_gains = _wb_gains;
         }
 
-        // Apply gains using convertTo
-        for (int i = 0; i < 3; ++i) {
-            float gain = (i == 0) ? avg_blue_gain : (i == 1) ? avg_green_gain : avg_red_gain;
-            channels[i].convertTo(channels[i], CV_8U, gain / 256.0);  // 16-bit to 8-bit and apply gain
+        for (uint8_t i = 0; i < 3; ++i) {
+            channels[i].convertTo(channels[i], CV_8U, avg_gains[i] / 256.0);
         }
-        std::cout << "BGR gains: " << avg_blue_gain << ", " << avg_green_gain << ", "<< avg_red_gain << std::endl;
-
+        ROS_DEBUG("BGR gains: %.3f %.3f %.3f", avg_gains[0], avg_gains[1], avg_gains[2]);
         cv::merge(channels, _rgb_image_out);
     }
 
-    // Apply white balance and 16-bit to 8-bit conversion on GPU
     void _apply_white_balance_gpu() {
         cv::cuda::split(_gpu_rgb_image, _gpu_rgb_channels);
 
-        // Upload custom white balance gains to GPU (manual scaling)
-        _gpu_rgb_channels[0].convertTo(_gpu_rgb_channels[0], CV_8U, _wb_blue_gain / 256.0);
-        _gpu_rgb_channels[1].convertTo(_gpu_rgb_channels[1], CV_8U, _wb_green_gain / 256.0);
-        _gpu_rgb_channels[2].convertTo(_gpu_rgb_channels[2], CV_8U, _wb_red_gain / 256.0);
+        for (int i = 0; i < 3; ++i) {
+            _gpu_rgb_channels[i].convertTo(_gpu_rgb_channels[i], CV_8U, _wb_gains[i] / 256.0);
+        }
 
         cv::cuda::merge(_gpu_rgb_channels, _gpu_rgb_image_8bit);
     }
 
-    // Add gain to deque and maintain window size N
-    void _add_gain_to_deque(std::deque<float>& deque, float gain) {
-        if (deque.size() >= _wb_N) deque.pop_front();
-        deque.push_back(gain);
-    }
-
-    // Compute average gain from deque
-    float _compute_average(const std::deque<float>& gains) {
-        float sum = 0.0f;
-        for (float gain : gains) {
-            sum += gain;
+    void _add_gain_to_history(const Eigen::Vector3d& gain) {
+        if (_wb_gain_history.size() >= _wb_N) {
+            _wb_gain_history.pop_front();
         }
-        return sum / gains.size();
+        _wb_gain_history.push_back(gain);
     }
 
-    // GPU channel storage
+    Eigen::Vector3d _compute_average_gains() const {
+        Eigen::Vector3d sum_gains(0.0, 0.0, 0.0);
+        for (const auto& gain : _wb_gain_history) {
+            sum_gains += gain;
+        }
+        return sum_gains / static_cast<double>(_wb_gain_history.size());
+    }
+
     std::vector<cv::cuda::GpuMat> _gpu_rgb_channels;
 };
 
