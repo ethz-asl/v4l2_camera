@@ -7,7 +7,7 @@ set -e
 readonly PREFIX=/usr/local  # install prefix, (can be ~/.local for a user install)
 readonly DEFAULT_VERSION=4.10.0  # controls the default version (gets reset by the first argument)
 readonly CPUS=$(nproc)  # controls the number of jobs
-readonly BUILD_DIR="/home/asl/Downloads"
+readonly BUILD_DIR="/tmp"
 
 # better board detection. if it has 6 or more cpus, it probably has a ton of ram too
 if [[ $CPUS -gt 5 ]]; then
@@ -26,7 +26,7 @@ cleanup () {
             echo "(Doing so may make running tests on the build later impossible)"
         fi
         # read -p "Y/N " yn
-	yn="n"
+    yn="n"
         case ${yn} in
             [Yy]* ) rm -rf $BUILD_DIR/build_opencv ; break;;
             [Nn]* ) break ;;
@@ -102,19 +102,63 @@ install_dependencies () {
         zlib1g-dev
 }
 
-configure () {
+# Automatically detect installed CUDA version
+detect_cuda_version() {
+    if command -v /usr/local/cuda/bin/nvcc &> /dev/null; then
+        CUDA_VERSION=$(/usr/local/cuda/bin/nvcc --version | grep -oP 'release \K[0-9]+\.[0-9]+')
+    else
+        echo "CUDA not found. Please install CUDA before running this script."
+        exit 1
+    fi
+}
+
+# Automatically detect installed cuDNN version
+detect_cudnn_version() {
+    if [[ -f "/usr/include/cudnn_version.h" ]]; then
+        CUDNN_MAJOR=$(grep -oP '(?<=#define CUDNN_MAJOR )\d+' /usr/include/cudnn_version.h)
+        CUDNN_MINOR=$(grep -oP '(?<=#define CUDNN_MINOR )\d+' /usr/include/cudnn_version.h)
+        CUDNN_PATCHLEVEL=$(grep -oP '(?<=#define CUDNN_PATCHLEVEL )\d+' /usr/include/cudnn_version.h)
+        CUDNN_VERSION="${CUDNN_MAJOR}.${CUDNN_MINOR}.${CUDNN_PATCHLEVEL}"
+    else
+        echo "cuDNN not found. Please install cuDNN before running this script."
+        exit 1
+    fi
+}
+
+# Set CUDA compute capabilities based on detected CUDA version
+set_cuda_arch_bin() {
+    case "$CUDA_VERSION" in
+        11.*)
+            CUDA_ARCH_BIN="5.3,6.1,6.2,7.0,7.5,8.0"
+            ;;
+        12.*)
+            CUDA_ARCH_BIN="6.1,6.2,7.5,8.0,8.6,8.7"
+            ;;
+        *)
+            echo "Unsupported CUDA version detected: $CUDA_VERSION"
+            exit 1
+            ;;
+    esac
+}
+
+# Update the configure function to use dynamic CUDA and cuDNN version detection
+configure() {
+    detect_cuda_version
+    detect_cudnn_version
+    set_cuda_arch_bin
+
     local CMAKEFLAGS="
         -D BUILD_EXAMPLES=OFF
         -D BUILD_opencv_python2=ON
         -D BUILD_opencv_python3=ON
         -D CMAKE_BUILD_TYPE=RELEASE
         -D CMAKE_INSTALL_PREFIX=${PREFIX}
-        -D CUDA_ARCH_BIN=5.3,6.2,7.2,8.7
+        -D CUDA_ARCH_BIN=${CUDA_ARCH_BIN}
         -D CUDA_ARCH_PTX=
         -D CUDA_FAST_MATH=ON
-        -D CUDNN_VERSION='8.4.1'
+        -D CUDNN_VERSION='${CUDNN_VERSION}'
         -D EIGEN_INCLUDE_PATH=/usr/include/eigen3 
-        -D ENABLE_NEON=ON
+        -D ENABLE_NEON=OFF
         -D OPENCV_DNN_CUDA=ON
         -D OPENCV_ENABLE_NONFREE=ON
         -D OPENCV_EXTRA_MODULES_PATH=$BUILD_DIR/build_opencv/opencv_contrib/modules
@@ -133,9 +177,11 @@ configure () {
         -D BUILD_TESTS=OFF"
     fi
 
+    echo "CUDA version: $CUDA_VERSION"
+    echo "cuDNN version: $CUDNN_VERSION"
+    echo "CUDA_ARCH_BIN: $CUDA_ARCH_BIN"
     echo "cmake flags: ${CMAKEFLAGS}"
-
-    cd opencv
+    cd $BUILD_DIR/build_opencv/opencv
     mkdir -p build
     cd build
     cmake ${CMAKEFLAGS} .. 2>&1 | tee -a configure.log
@@ -157,9 +203,9 @@ main () {
     # prepare for the build:
     setup
     install_dependencies
-    if [[ ! -d "$BUILD_DIR/build_opencv" ]] ; then
-    	git_source ${VER}
-    fi
+    # if [[ ! -d "$BUILD_DIR/build_opencv" ]] ; then
+    git_source ${VER}
+    # fi
 
     if [[ ${DO_TEST} ]] ; then
         configure test
