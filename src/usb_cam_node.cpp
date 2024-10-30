@@ -106,9 +106,9 @@ public:
     // enable/disable auto white balance temperature
     m_node.param("auto_white_balance", m_parameters.auto_white_balance, true);
     m_node.param("white_balance", m_parameters.white_balance, 4000);
-    m_node.param("wb_blue_gain", m_parameters.wb_blue_gain, 0.0);
-    m_node.param("wb_green_gain", m_parameters.wb_green_gain, 0.0);
-    m_node.param("wb_red_gain", m_parameters.wb_red_gain, 0.0);
+    m_node.param("wb_blue_gain", m_parameters.wb_blue_gain, 0.0f);
+    m_node.param("wb_green_gain", m_parameters.wb_green_gain, 0.0f);
+    m_node.param("wb_red_gain", m_parameters.wb_red_gain, 0.0f);
 
     // load the camera info
     m_node.param("camera_frame_id", m_image.header.frame_id, std::string("head_camera"));

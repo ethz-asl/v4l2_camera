@@ -1,10 +1,10 @@
+#include "ros/console.h"
+#include <deque>
+#include <Eigen/Dense>
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xphoto.hpp>
-#include <ros/console.h>
-#include <Eigen/Dense>
-#include <deque>
 
 namespace usb_cam
 {

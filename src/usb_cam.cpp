@@ -644,7 +644,7 @@ std::vector<capture_format_t> UsbCam::get_supported_formats()
         capture_format.v4l2_fmt.height = current_size->discrete.height;
 
         // Set a default or assumed frame interval if needed
-        capture_format.v4l2_fmt.type = V4L2_FRMIVAL_TYPE_DISCRE TE;
+        capture_format.v4l2_fmt.type = V4L2_FRMIVAL_TYPE_DISCRETE;
         capture_format.v4l2_fmt.discrete.numerator = 1;
         capture_format.v4l2_fmt.discrete.denominator = m_framerate;
 

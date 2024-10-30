@@ -21,13 +21,15 @@ if($ENV{ROS_VERSION} EQUAL 1)
     std_srvs
     sensor_msgs
     camera_info_manager
-    image_transport)
+    image_transport
+    rosconsole)
 else()
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 endif()
 
 find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(avcodec REQUIRED libavcodec)
@@ -55,13 +57,17 @@ add_library(${PROJECT_NAME} SHARED
 target_include_directories(${PROJECT_NAME} PUBLIC
   "include"
   ${OpenCV_INCLUDE_DIRS}
+  ${Eigen3_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME}
   ${avcodec_LIBRARIES}
   ${avutil_LIBRARIES}
   ${swscale_LIBRARIES}
-  ${OpenCV_LIBRARIES})
+  ${OpenCV_LIBRARIES}
+  Eigen3::Eigen
+)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -72,6 +78,7 @@ add_executable(${PROJECT_NAME}_node src/usb_cam_node.cpp)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  Eigen3::Eigen
 )
 target_include_directories(${PROJECT_NAME}_node PUBLIC
   ${catkin_INCLUDE_DIRS})
