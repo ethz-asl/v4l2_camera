@@ -6,27 +6,16 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  if($ENV{ROS_VERSION} EQUAL 2)
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror)
-  endif()
-endif()
-
-# Remove once ROS 1 Noetic is deprecated
-if($ENV{ROS_VERSION} EQUAL 1)
-  find_package(catkin REQUIRED COMPONENTS
-    cv_bridge
-    roscpp
-    std_msgs
-    std_srvs
-    sensor_msgs
-    camera_info_manager
-    image_transport
-    rosconsole)
-else()
-  find_package(ament_cmake_auto REQUIRED)
-  ament_auto_find_build_dependencies()
-endif()
+find_package(catkin REQUIRED COMPONENTS
+  cv_bridge
+  roscpp
+  std_msgs
+  std_srvs
+  sensor_msgs
+  camera_info_manager
+  image_transport
+  rosconsole
+)
 
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)

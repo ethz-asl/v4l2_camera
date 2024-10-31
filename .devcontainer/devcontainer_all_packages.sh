@@ -14,12 +14,14 @@ main() {
         htop
         locales
         net-tools
+        python3-rosdep
         software-properties-common
         ssh
         sudo
         udev
         unzip
         v4l-utils
+        vim
         wget
         zlib1g
     )

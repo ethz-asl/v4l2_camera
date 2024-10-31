@@ -15,5 +15,5 @@ In order to run the cameras on the Jetson Xavier NX, the [Arducam quickstart gui
 ### User groups
 TODO: Is the spi group actually needed? Or gpio?
 
-### OpenCV 4.9.X
+### OpenCV
 OpenCV >=4.9.0 is required in order to run the debayering process. An installation scripts inside `.devcontainer` is provided as help on how to compile it from source.
