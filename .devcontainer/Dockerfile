@@ -1,11 +1,12 @@
-FROM ros:noetic-ros-core
+# Base Stage: ROS and CUDA Installation
+FROM ros:noetic-ros-core AS base
 
 ARG TZ=Europe/Zurich
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 
 # All apt packages
-COPY devcontainer_all_packages.sh /tmp/devcontainer_all_packages.sh
+COPY .devcontainer/devcontainer_all_packages.sh /tmp/devcontainer_all_packages.sh
 RUN /tmp/devcontainer_all_packages.sh && rm -f /tmp/devcontainer_all_packages.sh
 
 ENV LANG="en_US.UTF-8" \
@@ -24,9 +25,18 @@ RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86
     sudo apt update && \
     sudo apt -y install cuda-toolkit-12-6 cudnn9-cuda-12
 
+# OpenCV Build Stage
+FROM base AS opencv_build
+
 # OpenCV 4.10.0 install
-COPY build_opencv.sh /tmp/build_opencv.sh
-RUN bash /tmp/build_opencv.sh
+COPY .devcontainer/build_opencv.sh /tmp/build_opencv.sh
+RUN bash /tmp/build_opencv.sh && rm -rf /tmp/build_opencv.sh
+
+# Final Stage: Combine ROS, CUDA, and OpenCV
+FROM base AS final
+
+# Copy OpenCV installation from the build stage
+COPY --from=opencv_build /usr/local /usr/local
 
 # Git-prompt: Source
 RUN echo 'if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then GIT_PROMPT_ONLY_IN_REPO=1; source "$HOME/.bash-git-prompt/gitprompt.sh"; fi' >> /home/asl/.bash_aliases
@@ -34,10 +44,13 @@ RUN echo 'if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then GIT_PROMPT_ONLY_
 # ROS: Source
 RUN echo "source /opt/ros/noetic/setup.bash" >> /home/asl/.bash_aliases
 
-# ROS: rosdep init
-RUN sudo rosdep init && \
-    rosdep update && \
-    rosdep install --from-paths . --ignore-src -r -y
+# ROS: rosdep install (TODO: maybe not so clean?)
+RUN sudo rosdep init
+USER asl
+RUN rosdep update
+COPY package.xml /tmp/
+RUN rosdep install --from-paths /tmp/ --ignore-src -r -y -v
+USER root
 
 # Clean up
 RUN rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/* /var/cache/apt/archives/*

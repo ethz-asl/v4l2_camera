@@ -149,15 +149,14 @@ configure() {
 
     local CMAKEFLAGS="
         -D BUILD_EXAMPLES=OFF
-        -D BUILD_opencv_python2=ON
-        -D BUILD_opencv_python3=ON
+        -D BUILD_opencv_python2=OFF
+        -D BUILD_opencv_python3=OFF
         -D CMAKE_BUILD_TYPE=RELEASE
         -D CMAKE_INSTALL_PREFIX=${PREFIX}
         -D CUDA_ARCH_BIN=${CUDA_ARCH_BIN}
-        -D CUDA_ARCH_PTX=
         -D CUDA_FAST_MATH=ON
         -D CUDNN_VERSION='${CUDNN_VERSION}'
-        -D EIGEN_INCLUDE_PATH=/usr/include/eigen3 
+        -D EIGEN_INCLUDE_PATH=/usr/include/eigen3
         -D ENABLE_NEON=OFF
         -D OPENCV_DNN_CUDA=ON
         -D OPENCV_ENABLE_NONFREE=ON
@@ -202,7 +201,7 @@ main () {
 
     # prepare for the build:
     setup
-    install_dependencies
+    # install_dependencies
     # if [[ ! -d "$BUILD_DIR/build_opencv" ]] ; then
     git_source ${VER}
     # fi
