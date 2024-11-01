@@ -16,16 +16,12 @@ class LearningInterface {
 public:
     LearningInterface() : _model_path("") {}
 
-    virtual void set_input(const float* input_buffer) {
-        cudaMemcpy(_input_buffer, input_buffer, _input_size, cudaMemcpyHostToDevice);
-    }
-
-    virtual void get_output(float* output_buffer) {
-        cudaMemcpy(output_buffer, _outputBuffer, _outputSize, cudaMemcpyDeviceToHost);
-    }
+    virtual void set_input(uint8_t* input_buffer);
+    virtual void get_output(uint8_t* output_buffer);
+    virtual void publish();
 
     void load_model();
-    bool run_inference(size_t batch_size);
+    bool run_inference();
 
     virtual ~LearningInterface() {
         if (_context) _context->destroy();
@@ -41,6 +37,10 @@ public:
 
 protected:
     std::string _model_path;
+    size_t input_height;
+    size_t input_width;
+    size_t output_height;
+    size_t output_width;
 
 private:
     float* _input_buffer = nullptr;
@@ -48,8 +48,6 @@ private:
     nvinfer1::ICudaEngine* _engine = nullptr;
     nvinfer1::IExecutionContext* _context = nullptr;
     nvinfer1::IRuntime* _runtime = nullptr;
-    size_t _input_size = 0;
-    size_t _output_size = 0;
     std::string _model_path;
     void* _buffers[2] = { nullptr, nullptr };
 };
