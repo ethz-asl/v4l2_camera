@@ -25,6 +25,15 @@ RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86
     sudo apt update && \
     sudo apt -y install cuda-toolkit-12-6 cudnn9-cuda-12
 
+# CUDA: Add PATH and LD_LIBRARY_PATH to .bash_aliases
+RUN echo 'export PATH=$PATH:/usr/local/cuda/bin' >> /home/asl/.bash_aliases && \
+    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64' >> /home/asl/.bash_aliases
+
+# TensorRT: Install from .deb file
+COPY resources/nv-tensorrt-local-repo-ubuntu2004-10.6.0-cuda-12.6_1.0-1_amd64.deb /tmp/tensorrt.deb
+RUN sudo dpkg -i /tmp/tensorrt.deb || sudo apt-get install -f -y
+RUN sudo cp /var/nv-tensorrt-local-repo-ubuntu2004-10.6.0-cuda-12.6/*-keyring.gpg /usr/share/keyrings/ && sudo apt update && sudo apt install -y tensorrt
+
 # OpenCV Build Stage
 FROM base AS opencv_build
 

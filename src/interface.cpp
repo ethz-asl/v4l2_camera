@@ -13,28 +13,50 @@ void LearningInterface::load_model() {
         file.read(model_data.data(), model_size);
         file.close();
 
-        _runtime = nvinfer1::createInferRuntime(nvinfer1::Logger());
-        if (_runtime != nullptr) {
-            _engine = _runtime->deserializeCudaEngine(model_data.data(), model_size, nullptr);
+        // Create logger instance
+        class Logger : public nvinfer1::ILogger {
+        public:
+            void log(Severity severity, const char* msg) noexcept override {
+                std::cout << msg << std::endl; // Log the message
+            }
+        } logger; // Create a logger instance
 
+        _runtime = nvinfer1::createInferRuntime(logger);
+        if (_runtime != nullptr) {
+            _engine = _runtime->deserializeCudaEngine(model_data.data(), model_size);
             if (_engine != nullptr) {
                 _context = _engine->createExecutionContext();
-
                 if (_context != nullptr) {
                     // Allocate buffers for input and output
-                    _inputSize = _engine->getBindingDimensions(0).volume() * sizeof(float);
-                    _outputSize = _engine->getBindingDimensions(1).volume() * sizeof(float);
+                    size_t input_size;
+                    size_t output_size;
+                    for (int io = 0; io < _engine->getNbIOTensors(); io++) {
+                        const char* name = _engine->getIOTensorName(io);
+                        std::cout << io << ": " << name;
+                        const nvinfer1::Dims dims = _engine->getTensorShape(name);
+
+                        size_t total_dims = 1;
+                        for (int d = 0; d < dims.nbDims; d++) {
+                            total_dims *= dims.d[d];
+                        }
+
+                        std::cout << " size: " << total_dims << std::endl;
+                        if (io == 0) {
+                            input_size = total_dims * sizeof(float);
+                        } else if (io == 1) {
+                            output_size = total_dims * sizeof(float);
+                        }
+                    }
 
                     // Allocate device buffers
-                    cudaMalloc(&_buffers[0], _inputSize);
-                    cudaMalloc(&_buffers[1], _outputSize);
+                    cudaMalloc(&_buffers[0], input_size);
+                    cudaMalloc(&_buffers[1], output_size);
 
                     // Allocate CPU buffers
-                    _inputBuffer = new float[_inputSize / sizeof(float)];
-                    _outputBuffer = new float[_outputSize / sizeof(float)];
+                    _input_buffer = new float[input_size / sizeof(float)];
+                    _output_buffer = new float[output_size / sizeof(float)];
 
-                    std::cout << "TensorRT model loaded successfully from: " << model_path << std::endl;
-
+                    std::cout << "TensorRT model loaded successfully from: " << _model_path << std::endl;
                 } else {
                     std::cout << "Failed to create execution context." << std::endl;
                 }
@@ -50,7 +72,7 @@ void LearningInterface::load_model() {
 }
 
 bool LearningInterface::run_inference(size_t batch_size) {
-    if (!_context->execute(batch_size, _buffers)) {
+    if (!_context->executeV2(_buffers)) {
         std::cerr << "Failed to execute inference." << std::endl;
         return false;
     }
