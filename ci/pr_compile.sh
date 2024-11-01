@@ -1,4 +1,5 @@
 #!/bin/bash
+source /opt/ros/noetic/setup.bash
 
 rm -rf build
 mkdir -p build
