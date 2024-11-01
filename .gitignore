@@ -7,3 +7,6 @@
 # documentation
 docs/xml
 site/
+
+resources/*
+build/*
