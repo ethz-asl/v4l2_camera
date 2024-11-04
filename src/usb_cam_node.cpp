@@ -72,7 +72,7 @@ public:
 
     UsbCamNode() : m_node("~") {
         // Setup the network that outputs derivates of the image captured
-        networks.push_back(std::make_unique<Raft>("resources/raft.onnx", 240, 320));
+        // networks.push_back(std::make_unique<Raft>("resources/raft.onnx", 240, 320));
 
         // Advertise the main image topic
         image_transport::ImageTransport it(m_node);
@@ -177,12 +177,12 @@ public:
         m_image_pub.publish(m_image, *ci);
 
         // Run all the networks
-        for (const auto& net : networks) {
-            net->set_input(m_image.data.data(), 1920, 1200);
-            if (net->run_inference(1)) {
-                net->publish();
-            }
-        }
+        // for (const auto& net : networks) {
+        //     net->set_input(m_image.data.data(), 1920, 1200);
+        //     if (net->run_inference(1)) {
+        //         net->publish();
+        //     }
+        // }
 
         return true;
     }

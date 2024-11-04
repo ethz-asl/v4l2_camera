@@ -30,9 +30,10 @@ RUN echo 'export PATH=$PATH:/usr/local/cuda/bin' >> /home/asl/.bash_aliases && \
     echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64' >> /home/asl/.bash_aliases
 
 # TensorRT: Install from .deb file
-COPY resources/nv-tensorrt-local-repo-ubuntu2004-10.6.0-cuda-12.6_1.0-1_amd64.deb /tmp/tensorrt.deb
-RUN sudo dpkg -i /tmp/tensorrt.deb || sudo apt-get install -f -y
-RUN sudo cp /var/nv-tensorrt-local-repo-ubuntu2004-10.6.0-cuda-12.6/*-keyring.gpg /usr/share/keyrings/ && sudo apt update && sudo apt install -y tensorrt
+COPY resources/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813_1-1_amd64.deb /tmp/
+RUN sudo dpkg -i /tmp/resources/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813_1-1_amd64.deb || sudo apt-get install -f -y
+# RUN sudo cp /var/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813/*-keyring.gpg /usr/share/keyrings/ && sudo apt update && sudo apt install -y tensorrt
+RUN sudo apt update && sudo apt install -y tensorrt
 
 # OpenCV Build Stage
 FROM base AS opencv_build
@@ -63,5 +64,4 @@ USER root
 
 # Clean up
 RUN rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/* /var/cache/apt/archives/*
-
 ENTRYPOINT ["/bin/bash"]

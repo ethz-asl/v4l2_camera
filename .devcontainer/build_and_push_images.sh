@@ -1,1 +1,1 @@
-docker buildx build -t omavteam/v4l2_camera:latest -f .devcontainer/Dockerfile --push .
+docker buildx build --tag omavteam/v4l2_camera:latest -f .devcontainer/Dockerfile --push .
