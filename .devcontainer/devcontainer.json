@@ -1,0 +1,43 @@
+{
+    "image": "omavteam/v4l2_camera:latest",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python"
+            ],
+            "settings": {
+                "files.hotExit": "off",
+                "window.restoreWindows": "none",
+                "workbench.startupEditor": "none"
+            }
+        }
+    },
+    "remoteEnv": {
+        "DISPLAY": "${localEnv:DISPLAY}"
+    },
+    "remoteUser": "asl",
+    "initializeCommand": ".devcontainer/devcontainer_optional_mounts.sh",
+    "mounts": [
+        {
+            "source": "${localEnv:HOME}/.bash-git-prompt",
+            "target": "/home/asl/.bash-git-prompt",
+            "type": "bind"
+        },
+        {
+            "source": "${localEnv:HOME}/.cache",
+            "target": "/home/asl/.cache",
+            "type": "bind"
+        }
+    ],
+    "runArgs": [
+        "--gpus",
+        "all",
+        "--privileged",
+        "--device=/dev/dri:/dev/dri",
+        "-v",
+        "/tmp/.X11-unix:/tmp/.X11-unix",
+        "-v",
+        "/dev/bus/usb:/dev/bus/usb",
+        "--net=host"
+    ]
+}

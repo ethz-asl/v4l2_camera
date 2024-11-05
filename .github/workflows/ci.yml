@@ -1,0 +1,23 @@
+name: CI
+on: pull_request
+jobs:
+  pr_build:
+    name: "${{ matrix.ci_script }}"
+    runs-on: self-hosted
+    container:
+      image: omavteam/v4l2_camera:latest
+
+    strategy:
+      matrix:
+        ci_script: [pr_compile]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          set-safe-directory: true
+
+      - name: Run ${{ matrix.ci_script }}
+        run: |
+          bash -x ./ci/${{ matrix.ci_script }}.sh
