@@ -23,16 +23,27 @@ RUN groupadd -r asl && \
 RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb && \
     sudo dpkg -i cuda-keyring_1.1-1_all.deb && \
     sudo apt update && \
-    sudo apt -y install cuda-toolkit-12-6 cudnn9-cuda-12
+    sudo apt -y install cuda-toolkit-11-6 cudnn9-cuda-11
 
 # CUDA: Add PATH and LD_LIBRARY_PATH to .bash_aliases
 RUN echo 'export PATH=$PATH:/usr/local/cuda/bin' >> /home/asl/.bash_aliases && \
     echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64' >> /home/asl/.bash_aliases
 
 # TensorRT: Install from .deb file
-COPY resources/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813_1-1_amd64.deb /tmp/
-RUN sudo dpkg -i /tmp/resources/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813_1-1_amd64.deb || sudo apt-get install -f -y
-RUN sudo apt-key add /var/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813/c1c4ee19.pub && sudo apt update && sudo apt install -y tensorrt
+COPY resources/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813_1-1_amd64.deb /tmp/tensorrt.deb
+RUN sudo dpkg -i /tmp/tensorrt.deb
+RUN sudo apt-key add /var/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813/c1c4ee19.pub && sudo apt update
+RUN sudo apt install -y tensorrt=8.4.3.1-1+cuda11.6 \
+                        libnvinfer8=8.4.3-1+cuda11.6 \
+                        libnvinfer-plugin8=8.4.3-1+cuda11.6 \
+                        libnvparsers8=8.4.3-1+cuda11.6 \
+                        libnvonnxparsers8=8.4.3-1+cuda11.6 \
+                        libnvinfer-bin=8.4.3-1+cuda11.6 \
+                        libnvinfer-dev=8.4.3-1+cuda11.6 \
+                        libnvinfer-plugin-dev=8.4.3-1+cuda11.6 \
+                        libnvparsers-dev=8.4.3-1+cuda11.6 \
+                        libnvonnxparsers-dev=8.4.3-1+cuda11.6 \
+                        libnvinfer-samples=8.4.3-1+cuda11.6
 
 # OpenCV Build Stage
 FROM base AS opencv_build
