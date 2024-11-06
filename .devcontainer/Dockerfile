@@ -32,8 +32,7 @@ RUN echo 'export PATH=$PATH:/usr/local/cuda/bin' >> /home/asl/.bash_aliases && \
 # TensorRT: Install from .deb file
 COPY resources/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813_1-1_amd64.deb /tmp/
 RUN sudo dpkg -i /tmp/resources/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813_1-1_amd64.deb || sudo apt-get install -f -y
-# RUN sudo cp /var/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813/*-keyring.gpg /usr/share/keyrings/ && sudo apt update && sudo apt install -y tensorrt
-RUN sudo apt update && sudo apt install -y tensorrt
+RUN sudo apt-key add /var/nv-tensorrt-repo-ubuntu2004-cuda11.6-trt8.4.3.1-ga-20220813/c1c4ee19.pub && sudo apt update && sudo apt install -y tensorrt
 
 # OpenCV Build Stage
 FROM base AS opencv_build
