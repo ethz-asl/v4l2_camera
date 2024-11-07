@@ -104,8 +104,8 @@ install_dependencies () {
 
 # Automatically detect installed CUDA version
 detect_cuda_version() {
-    if command -v /usr/local/cuda/bin/nvcc &> /dev/null; then
-        CUDA_VERSION=$(/usr/local/cuda/bin/nvcc --version | grep -oP 'release \K[0-9]+\.[0-9]+')
+    if command -v /usr/local/cuda-11.8/bin/nvcc &> /dev/null; then
+        CUDA_VERSION=$(/usr/local/cuda-11.8/bin/nvcc --version | grep -oP 'release \K[0-9]+\.[0-9]+')
     else
         echo "CUDA not found. Please install CUDA before running this script."
         exit 1

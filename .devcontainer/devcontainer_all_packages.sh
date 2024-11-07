@@ -52,6 +52,7 @@ main() {
         python3-dev
         python3-matplotlib
         python3-numpy
+        python3-pip
         python3-rosdep
         qv4l2
         software-properties-common

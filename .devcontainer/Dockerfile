@@ -19,31 +19,31 @@ RUN groupadd -r asl && \
     mkdir -p /etc/sudoers.d && \
     echo 'asl ALL=NOPASSWD: ALL' > /etc/sudoers.d/asl
 
-# CUDA: Install
+# CUDA: Install (NOTE: libcublas 12.6 is needed for trtexec)
 RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb && \
     sudo dpkg -i cuda-keyring_1.1-1_all.deb && \
     sudo apt update && \
-    sudo apt -y install cuda-toolkit-11-8 cudnn9-cuda-11
+    sudo apt -y install cuda-toolkit-11-8 cudnn9-cuda-11 libcublas-12-6
 
 # CUDA: Add PATH and LD_LIBRARY_PATH to .bash_aliases
-RUN echo 'export PATH=$PATH:/usr/local/cuda/bin' >> /home/asl/.bash_aliases && \
-    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64' >> /home/asl/.bash_aliases
+RUN echo 'export PATH=$PATH:/usr/local/cuda-11.8/bin' >> /home/asl/.bash_aliases && \
+    echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.8/lib64:/usr/lib/x86_64-linux-gnu/' >> /home/asl/.bash_aliases
 
-# TensorRT: Install from .deb file
-COPY resources/nv-tensorrt-local-repo-ubuntu2004-8.5.3-cuda-11.8_1.0-1_amd64.deb /tmp/tensorrt.deb
+# TensorRT: Install from .deb file: Seems we run 8.5.2.2 (which is bundled with 8.5.3)
+COPY .devcontainer/nv-tensorrt-local-repo-ubuntu2004-8.5.3-cuda-11.8_1.0-1_amd64.deb /tmp/tensorrt.deb
 RUN sudo dpkg -i /tmp/tensorrt.deb
 RUN sudo cp /var/nv-tensorrt-local-repo-ubuntu2004-8.5.3-cuda-11.8/nv-tensorrt-local-3EFA7C6A-keyring.gpg /usr/share/keyrings/
-RUN sudo apt update && sudo apt install -y tensorrt=8.5.3.1-1+cuda11.8 \
-                                           libnvinfer8=8.5.3-1+cuda11.8 \
-                                           libnvinfer-plugin8=8.5.3-1+cuda11.8 \
-                                           libnvparsers8=8.5.3-1+cuda11.8 \
-                                           libnvonnxparsers8=8.5.3-1+cuda11.8 \
-                                           libnvinfer-bin=8.5.3-1+cuda11.8 \
-                                           libnvinfer-dev=8.5.3-1+cuda11.8 \
-                                           libnvinfer-plugin-dev=8.5.3-1+cuda11.8 \
-                                           libnvparsers-dev=8.5.3-1+cuda11.8 \
-                                           libnvonnxparsers-dev=8.5.3-1+cuda11.8 \
-                                           libnvinfer-samples=8.5.3-1+cuda11.8
+RUN sudo apt update && sudo apt install -y tensorrt=8.5.2.2-1+cuda11.8 \
+                                           libnvinfer8=8.5.2-1+cuda11.8 \
+                                           libnvinfer-plugin8=8.5.2-1+cuda11.8 \
+                                           libnvparsers8=8.5.2-1+cuda11.8 \
+                                           libnvonnxparsers8=8.5.2-1+cuda11.8 \
+                                           libnvinfer-bin=8.5.2-1+cuda11.8 \
+                                           libnvinfer-dev=8.5.2-1+cuda11.8 \
+                                           libnvinfer-plugin-dev=8.5.2-1+cuda11.8 \
+                                           libnvparsers-dev=8.5.2-1+cuda11.8 \
+                                           libnvonnxparsers-dev=8.5.2-1+cuda11.8 \
+                                           libnvinfer-samples=8.5.2-1+cuda11.8
 
 # OpenCV Build Stage
 FROM base AS opencv_build

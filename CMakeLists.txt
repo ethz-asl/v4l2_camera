@@ -46,6 +46,9 @@ endif()
 set(TENSORRT_LIB_DIR /usr/lib/x86_64-linux-gnu CACHE PATH "Path to TensorRT libraries")
 find_library(NVINFER nvinfer PATHS ${TENSORRT_LIB_DIR})
 find_library(NVINFER_PLUGIN nvinfer_plugin PATHS ${TENSORRT_LIB_DIR})
+message(STATUS "TensorRT NVINFER library found at: ${NVINFER}")
+message(STATUS "TensorRT NVINFER_PLUGIN library found at: ${NVINFER_PLUGIN}")
+
 
 # Check if TensorRT libraries are found
 if(NOT NVINFER OR NOT NVINFER_PLUGIN)
@@ -90,12 +93,15 @@ catkin_package(
 # Build the USB camera node executable
 add_executable(${PROJECT_NAME}_node src/usb_cam_node.cpp)
 target_link_libraries(${PROJECT_NAME}_node
-  ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-  ${avcodec_LIBRARIES}
-  ${avutil_LIBRARIES}
-  ${swscale_LIBRARIES}
+    ${PROJECT_NAME}
+    ${catkin_LIBRARIES}
+    ${avcodec_LIBRARIES}
+    ${avutil_LIBRARIES}
+    ${swscale_LIBRARIES}
+    ${NVINFER}
+    ${NVINFER_PLUGIN}
 )
+set_target_properties(${PROJECT_NAME}_node PROPERTIES LINK_FLAGS "-Wl,--no-as-needed")
 
 # Ensure include directories are set
 target_include_directories(${PROJECT_NAME}_node PUBLIC
@@ -116,6 +122,7 @@ if(BUILD_TESTING)
       ${NVINFER_PLUGIN}
       ${CUDA_LIBRARIES}
   )
+  set_target_properties(test_learning_interface PROPERTIES LINK_FLAGS "-Wl,--no-as-needed")
 endif()
 
 # Installation rules

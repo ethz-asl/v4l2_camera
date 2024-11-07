@@ -13,15 +13,7 @@ void LearningInterface::load_model() {
         file.read(model_data.data(), model_size);
         file.close();
 
-        // Create logger instance
-        class Logger : public nvinfer1::ILogger {
-        public:
-            void log(Severity severity, const char* msg) noexcept override {
-                std::cout << msg << std::endl;
-            }
-        } logger;
-
-        _runtime = nvinfer1::createInferRuntime(logger);
+        _runtime = nvinfer1::createInferRuntime(_logger);
         if (_runtime != nullptr) {
             _engine = _runtime->deserializeCudaEngine(model_data.data(), model_size);
             if (_engine != nullptr) {
