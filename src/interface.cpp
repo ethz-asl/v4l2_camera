@@ -17,9 +17,9 @@ void LearningInterface::load_model() {
         class Logger : public nvinfer1::ILogger {
         public:
             void log(Severity severity, const char* msg) noexcept override {
-                std::cout << msg << std::endl; // Log the message
+                std::cout << msg << std::endl;
             }
-        } logger; // Create a logger instance
+        } logger;
 
         _runtime = nvinfer1::createInferRuntime(logger);
         if (_runtime != nullptr) {

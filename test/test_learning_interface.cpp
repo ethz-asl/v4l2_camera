@@ -8,7 +8,7 @@
 class RaftTest : public ::testing::Test {
 protected:
     // Initialize variables for the test
-    std::string model_path = "path/to/model.onnx"; // Change to a valid model path
+    std::string model_path = "../resources/raft_small_iter10_240x320.onnx.plan";
     size_t input_height = 224;
     size_t input_width = 224;
 
