@@ -153,6 +153,7 @@ configure() {
         -D BUILD_opencv_python3=OFF
         -D CMAKE_BUILD_TYPE=RELEASE
         -D CMAKE_INSTALL_PREFIX=${PREFIX}
+        -D CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.8
         -D CUDA_ARCH_BIN=${CUDA_ARCH_BIN}
         -D CUDA_FAST_MATH=ON
         -D CUDNN_VERSION='${CUDNN_VERSION}'
@@ -170,8 +171,7 @@ configure() {
         -D WITH_OPENGL=ON"
 
     if [[ "$1" != "test" ]] ; then
-        CMAKEFLAGS="
-        ${CMAKEFLAGS}
+        CMAKEFLAGS="${CMAKEFLAGS}
         -D BUILD_PERF_TESTS=OFF
         -D BUILD_TESTS=OFF"
     fi

@@ -9,5 +9,7 @@ docs/xml
 site/
 
 .devcontainer/*.deb
+*.out
+resources/*
 build/*
 test/resources/*.plan
