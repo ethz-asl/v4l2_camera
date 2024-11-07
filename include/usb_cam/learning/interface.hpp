@@ -22,7 +22,6 @@ public:
 
     void load_model();
     bool run_inference(size_t batch_size);
-    
 
     virtual ~LearningInterface() {
         // if (_context) _context->destroy();
@@ -36,9 +35,17 @@ public:
         delete[] _output_buffer;
     }
 
+    float* get_input_buffer() { return _input_buffer; }
+    nvinfer1::ICudaEngine* get_engine() { return _engine; }
+    nvinfer1::IExecutionContext* get_context() { return _context; }
+    nvinfer1::IRuntime* get_runtime() { return _runtime; }
+
 protected:
     float* _input_buffer = nullptr;
     float* _output_buffer = nullptr;
+    nvinfer1::ICudaEngine* _engine = nullptr;
+    nvinfer1::IExecutionContext* _context = nullptr;
+    nvinfer1::IRuntime* _runtime = nullptr;
     size_t input_height;
     size_t input_width;
     size_t output_height;
@@ -46,9 +53,6 @@ protected:
     std::string _model_path;
 
 private:
-    nvinfer1::ICudaEngine* _engine = nullptr;
-    nvinfer1::IExecutionContext* _context = nullptr;
-    nvinfer1::IRuntime* _runtime = nullptr;
     void* _buffers[2] = { nullptr, nullptr };
 };
 

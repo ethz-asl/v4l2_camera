@@ -30,23 +30,25 @@ void LearningInterface::load_model() {
                     // Allocate buffers for input and output
                     size_t input_size;
                     size_t output_size;
-                    // for (int io = 0; io < _engine->getNbIOTensors(); io++) {
-                    //     const char* name = _engine->getIOTensorName(io);
-                    //     std::cout << io << ": " << name;
-                    //     const nvinfer1::Dims dims = _engine->getTensorShape(name);
+                    for (int io = 0; io < _engine->getNbBindings(); io++) {
+                        const char* name = _engine->getBindingName(io);
+                        std::cout << io << ": " << name;
+                        const nvinfer1::Dims dims = _engine->getBindingDimensions(io);
 
-                    //     size_t total_dims = 1;
-                    //     for (int d = 0; d < dims.nbDims; d++) {
-                    //         total_dims *= dims.d[d];
-                    //     }
+                        size_t total_dims = 1;
+                        for (int d = 0; d < dims.nbDims; d++) {
+                            total_dims *= dims.d[d];
+                        }
 
-                    //     std::cout << " size: " << total_dims << std::endl;
-                    //     if (io == 0) {
-                    //         input_size = total_dims * sizeof(float);
-                    //     } else if (io == 1) {
-                    //         output_size = total_dims * sizeof(float);
-                    //     }
-                    // }
+                        std::cout << " size: " << total_dims << std::endl;
+
+                        // Check if it's an input or output binding
+                        if (_engine->bindingIsInput(io)) {
+                            input_size = total_dims * sizeof(float);
+                        } else {
+                            output_size = total_dims * sizeof(float);
+                        }
+                    }
 
                     // Allocate device buffers
                     cudaMalloc(&_buffers[0], input_size);

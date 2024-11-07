@@ -9,7 +9,7 @@ jobs:
 
     strategy:
       matrix:
-        ci_script: [pr_compile]
+        ci_script: [pr_compile, pr_run_tests]
 
     steps:
       - name: Checkout

@@ -103,22 +103,19 @@ target_include_directories(${PROJECT_NAME}_node PUBLIC
 
 # Testing
 if(BUILD_TESTING)
-  if($ENV{ROS_VERSION} EQUAL 2)
-    find_package(ament_lint_auto REQUIRED)
-    ament_lint_auto_find_test_dependencies()
-    find_package(ament_cmake_gtest)
+  # Find GTest package
+  find_package(GTest REQUIRED)
+  include_directories(${GTEST_INCLUDE_DIRS})
 
-    # Unit tests
-    ament_add_gtest(test_usb_cam_utils test/test_usb_cam_utils.cpp)
-    target_link_libraries(test_usb_cam_utils ${PROJECT_NAME})
-
-    ament_add_gtest(test_pixel_formats test/test_pixel_formats.cpp)
-    target_link_libraries(test_pixel_formats ${PROJECT_NAME})
-
-    # Integration tests (commented out as per TODO)
-    # ament_add_gtest(test_usb_cam_lib test/test_usb_cam_lib.cpp)
-    # target_link_libraries(test_usb_cam_lib ${PROJECT_NAME})
-  endif()
+  catkin_add_gtest(test_learning_interface test/test_learning_interface.cpp)
+  target_link_libraries(test_learning_interface
+      ${PROJECT_NAME}
+      ${catkin_LIBRARIES}
+      GTest::gtest_main
+      ${NVINFER}
+      ${NVINFER_PLUGIN}
+      ${CUDA_LIBRARIES}
+  )
 endif()
 
 # Installation rules
