@@ -38,7 +38,7 @@
 #include "usb_cam/utils.hpp"
 
 #include "usb_cam/learning/interface.hpp"
-#include "usb_cam/learning/raft.hpp"
+#include "usb_cam/learning/depth_anything_v2.hpp"
 
 namespace usb_cam {
 class UsbCamNode {
@@ -72,7 +72,8 @@ public:
 
     UsbCamNode() : m_node("~") {
         // Setup the network that outputs derivates of the image captured
-        networks.push_back(std::make_unique<Raft>("resources/raft.onnx", 240, 320));
+        // TODO: Actual network
+        networks.push_back(std::make_unique<DepthAnythingV2>("depth_anything_v2_vitb.onnx"));
 
         // Advertise the main image topic
         image_transport::ImageTransport it(m_node);
@@ -178,7 +179,7 @@ public:
 
         // Run all the networks
         for (const auto& net : networks) {
-            net->set_input(m_image.data.data(), 1920, 1200);
+            net->set_input(m_image.data.data());
             if (net->run_inference(1)) {
                 net->publish();
             }

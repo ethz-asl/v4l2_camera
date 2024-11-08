@@ -46,13 +46,15 @@ endif()
 set(TENSORRT_LIB_DIR /usr/lib/x86_64-linux-gnu CACHE PATH "Path to TensorRT libraries")
 find_library(NVINFER nvinfer PATHS ${TENSORRT_LIB_DIR})
 find_library(NVINFER_PLUGIN nvinfer_plugin PATHS ${TENSORRT_LIB_DIR})
+find_library(NVONNXPARSER nvonnxparser PATHS ${TENSORRT_LIB_DIR})
+
 message(STATUS "TensorRT NVINFER library found at: ${NVINFER}")
 message(STATUS "TensorRT NVINFER_PLUGIN library found at: ${NVINFER_PLUGIN}")
-
+message(STATUS "TensorRT NVONNXPARSER library found at: ${NVONNXPARSER}")
 
 # Check if TensorRT libraries are found
-if(NOT NVINFER OR NOT NVINFER_PLUGIN)
-  message(FATAL_ERROR "TensorRT libraries not found. Set TENSORRT_LIB_DIR correctly.")
+if(NOT NVINFER OR NOT NVINFER_PLUGIN OR NOT NVONNXPARSER)
+  message(FATAL_ERROR "TensorRT libraries not found. Ensure TENSORRT_LIB_DIR is set correctly.")
 endif()
 
 ## Build the USB camera library
@@ -82,6 +84,7 @@ target_link_libraries(${PROJECT_NAME}
     ${swscale_LIBRARIES}
     ${NVINFER}
     ${NVINFER_PLUGIN}
+    ${NVONNXPARSER}
 )
 
 # Define catkin package
@@ -100,6 +103,7 @@ target_link_libraries(${PROJECT_NAME}_node
     ${swscale_LIBRARIES}
     ${NVINFER}
     ${NVINFER_PLUGIN}
+    ${NVONNXPARSER}
 )
 set_target_properties(${PROJECT_NAME}_node PROPERTIES LINK_FLAGS "-Wl,--no-as-needed")
 
@@ -113,16 +117,17 @@ if(BUILD_TESTING)
   find_package(GTest REQUIRED)
   include_directories(${GTEST_INCLUDE_DIRS})
 
-  catkin_add_gtest(test_learning_interface test/test_learning_interface.cpp)
-  target_link_libraries(test_learning_interface
+  catkin_add_gtest(test_depth_anything_v2 test/test_depth_anything_v2.cpp)
+  target_link_libraries(test_depth_anything_v2
       ${PROJECT_NAME}
       ${catkin_LIBRARIES}
       GTest::gtest_main
       ${NVINFER}
       ${NVINFER_PLUGIN}
+      ${NVONNXPARSER}
       ${CUDA_LIBRARIES}
   )
-  set_target_properties(test_learning_interface PROPERTIES LINK_FLAGS "-Wl,--no-as-needed")
+  set_target_properties(test_depth_anything_v2 PROPERTIES LINK_FLAGS "-Wl,--no-as-needed")
 endif()
 
 # Installation rules
