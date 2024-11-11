@@ -57,3 +57,7 @@ TEST_F(TestDepthAnythingV2, TestSetInput) {
     ASSERT_NE(input_data, nullptr);
     ASSERT_FLOAT_EQ(input_data[0], img.at<cv::Vec3b>(0, 0)[0] / 255.0f);
 }
+
+TEST_F(TestDepthAnythingV2, TestPredict) {
+    depth_anything_v2->predict();
+}

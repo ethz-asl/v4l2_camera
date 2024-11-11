@@ -3,7 +3,7 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "ms-python.python"
+                "ms-vscode.cpptools"
             ],
             "settings": {
                 "files.hotExit": "off",

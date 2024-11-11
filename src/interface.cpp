@@ -100,7 +100,4 @@ LearningInterface::~LearningInterface() {
     cudaFree(_stream);
     cudaFree(_buffers[0]);
     cudaFree(_buffers[1]);
-
-    delete[] _input_data;
-    delete[] _output_data;
 }

@@ -180,7 +180,7 @@ public:
         // Run all the networks
         for (const auto& net : networks) {
             net->set_input(m_image);
-            if (net->run_inference(1)) {
+            if (net->predict()) {
                 net->publish();
             }
         }

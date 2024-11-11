@@ -114,6 +114,7 @@ target_include_directories(${PROJECT_NAME}_node PUBLIC
 # Testing
 if(BUILD_TESTING)
   # Find GTest package
+  set(CMAKE_BUILD_TYPE Debug)
   find_package(GTest REQUIRED)
   include_directories(${GTEST_INCLUDE_DIRS})
 

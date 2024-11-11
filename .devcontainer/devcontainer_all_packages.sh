@@ -11,6 +11,7 @@ main() {
         ccache
         cmake
         curl
+        gdb
         gfortran
         git
         gnupg
