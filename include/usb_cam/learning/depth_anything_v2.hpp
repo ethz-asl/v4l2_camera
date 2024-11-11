@@ -38,15 +38,14 @@ public:
     }
 
     void publish() override {
-        cv::Mat depth_prediction = cv::Mat(_HEIGHT, _WIDTH, CV_32FC1, _output_data);
-
-        cv_bridge::CvImage depth_image;
-        depth_image.header.stamp = ros::Time::now();  // Set the timestamp
-        depth_image.header.frame_id = "depth_frame";   // Set the frame ID (update as needed)
-        depth_image.encoding = sensor_msgs::image_encodings::TYPE_32FC1; // Depth is typically float32, single channel
-        depth_image.image = depth_prediction;
-
         if (_depth_publication.getTopic() != "") {
+            cv::Mat depth_prediction = cv::Mat(_HEIGHT, _WIDTH, CV_32FC1, _output_data);
+
+            cv_bridge::CvImage depth_image;
+            depth_image.header.stamp = ros::Time::now();
+            depth_image.header.frame_id = "depth_frame";
+            depth_image.encoding = sensor_msgs::image_encodings::TYPE_32FC1;
+            depth_image.image = depth_prediction;
             _depth_publication.publish(depth_image.toImageMsg());
         }
     }
