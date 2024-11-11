@@ -18,10 +18,17 @@ protected:
     const std::string model_path = "/workspaces/v4l2_camera/test/resources/depth_anything_v2_vits_16.onnx";
     const std::string test_image_path = "/workspaces/v4l2_camera/test/resources/maschinenhalle_example_frame.jpg";
 
+    cv_bridge::CvImage cv_image;
+    cv::Mat img;
     DepthAnythingV2Test* depth_anything_v2;
+    sensor_msgs::Image msg;
 
     void SetUp() override {
-        // Instantiate the Raft model with the test parameters
+        img = cv::imread(test_image_path, cv::IMREAD_COLOR);
+        cv_image.image = img;
+        cv_image.encoding = sensor_msgs::image_encodings::RGB8;
+        cv_image.toImageMsg(msg);
+
         depth_anything_v2 = new DepthAnythingV2Test(model_path);
         depth_anything_v2->load_model();
     }
@@ -38,17 +45,6 @@ TEST_F(TestDepthAnythingV2, TestModelLoad) {
 }
 
 TEST_F(TestDepthAnythingV2, TestSetInput) {
-    // Load the image into a sensor_msgs::Image object
-    cv::Mat img = cv::imread(test_image_path, cv::IMREAD_COLOR);
-    ASSERT_FALSE(img.empty()) << "Test image could not be loaded!";
-
-    sensor_msgs::Image msg;
-    cv_bridge::CvImage cv_image;
-    cv_image.image = img;
-    cv_image.encoding = sensor_msgs::image_encodings::RGB8;
-    cv_image.toImageMsg(msg);
-
-    // Call the set_input function with the loaded image
     depth_anything_v2->set_input(msg);
     ASSERT_NE(depth_anything_v2->get_input_data(), nullptr);
 
@@ -58,8 +54,10 @@ TEST_F(TestDepthAnythingV2, TestSetInput) {
     ASSERT_FLOAT_EQ(input_data[0], img.at<cv::Vec3b>(0, 0)[0] / 255.0f);
 }
 
-TEST_F(TestDepthAnythingV2, TestPredict) {
+TEST_F(TestDepthAnythingV2, TestPredictPublish) {
     for (size_t i = 0; i < 10; i++) {
+        depth_anything_v2->set_input(msg);
         depth_anything_v2->predict();
+        depth_anything_v2->publish();
     }
 }
