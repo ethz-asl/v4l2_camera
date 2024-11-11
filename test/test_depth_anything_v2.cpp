@@ -59,5 +59,11 @@ TEST_F(TestDepthAnythingV2, TestSetInput) {
 }
 
 TEST_F(TestDepthAnythingV2, TestPredict) {
-    depth_anything_v2->predict();
+    auto start = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < 10; i++) {
+        depth_anything_v2->predict();
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Time taken for 10 predictions: " << elapsed.count() << " seconds." << std::endl;
 }
