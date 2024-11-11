@@ -9,12 +9,13 @@
 
 class DepthAnythingV2 : public LearningInterface {
 public:
-    DepthAnythingV2(ros::NodeHandle* nh, std::string model_path) {
+    DepthAnythingV2(ros::NodeHandle* nh, std::string model_path, std::string topic) {
         _INPUT_SIZE = cv::Size(_HEIGHT, _WIDTH);
         _model_path = model_path;
+        _load_model();
 
         if (nh != nullptr) {
-            _depth_publication = nh->advertise<sensor_msgs::Image>("depth_anything_v2", 1);
+            _depth_publication = nh->advertise<sensor_msgs::Image>(topic, 1);
         }
     }
 

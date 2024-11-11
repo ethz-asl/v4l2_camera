@@ -97,13 +97,14 @@ catkin_package(
 add_executable(${PROJECT_NAME}_node src/usb_cam_node.cpp)
 target_link_libraries(${PROJECT_NAME}_node
     ${PROJECT_NAME}
-    ${catkin_LIBRARIES}
     ${avcodec_LIBRARIES}
     ${avutil_LIBRARIES}
-    ${swscale_LIBRARIES}
-    ${NVINFER}
+    ${catkin_LIBRARIES}
+    ${CUDA_LIBRARIES}
     ${NVINFER_PLUGIN}
+    ${NVINFER}
     ${NVONNXPARSER}
+    ${swscale_LIBRARIES}
 )
 set_target_properties(${PROJECT_NAME}_node PROPERTIES LINK_FLAGS "-Wl,--no-as-needed")
 

@@ -71,10 +71,6 @@ public:
     }
 
     UsbCamNode() : m_node("~") {
-        // Setup the network that outputs derivates of the image captured
-        // TODO: Actual network
-        networks.push_back(std::make_unique<DepthAnythingV2>(&m_node, "depth_anything_v2_vitb.onnx"));
-
         // Advertise the main image topic
         image_transport::ImageTransport it(m_node);
         m_image_pub = it.advertiseCamera("image_raw", 1);
@@ -125,6 +121,14 @@ public:
           camera_info.width = m_parameters.image_width;
           camera_info.height = m_parameters.image_height;
           m_camera_info->setCameraInfo(camera_info);
+        }
+
+        // Setup the network that outputs derivates of the image captured
+        m_node.param("depth_anything_v2_file", m_parameters.dav2_file, std::string(""));
+        m_node.param("depth_anything_v2_topic", m_parameters.dav2_topic, std::string(""));
+
+        if (!m_parameters.dav2_file.empty() && !m_parameters.dav2_topic.empty()) {
+            networks.push_back(std::make_unique<DepthAnythingV2>(&m_node, m_parameters.dav2_file, m_parameters.dav2_topic));
         }
 
         ROS_INFO("Starting '%s' (%s) at %dx%d via %s (%s) at %i FPS",

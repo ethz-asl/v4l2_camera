@@ -1,9 +1,19 @@
 #include "usb_cam/learning/interface.hpp"
 #include <NvOnnxParser.h>
+#include <ros/ros.h>
 
 using namespace nvinfer1;
 
-void LearningInterface::load_model() {
+std::mutex LearningInterface::predict_mutex;
+
+void LearningInterface::_load_model() {
+    std::ifstream file_check(_model_path);
+    if (!file_check.good()) {
+        std::cerr << "Error: " << _model_path << "' does not exist." << std::endl;
+        throw std::runtime_error("Model file not found");
+    }
+    file_check.close();
+
     if (_model_path.find(".onnx") == std::string::npos) {
         std::ifstream engine_stream(_model_path, std::ios::binary);
         engine_stream.seekg(0, std::ios::end);
@@ -27,11 +37,19 @@ void LearningInterface::load_model() {
     }
 
     // Define input dimensions
-    const auto input_dims = _engine->getTensorShape(_engine->getIOTensorName(0));
-    const int input_h = input_dims.d[2];
-    const int input_w = input_dims.d[3];
+    // TODO: Check dimensions, set as members
+#if NV_TENSORRT_MAJOR < 10
+    auto input_dims = _engine->getBindingDimensions(0);
+    auto output_dims = _engine->getBindingDimensions(1);
+#else
+    auto input_dims = _engine->getTensorShape(_engine->getIOTensorName(0));
+    auto output_dims = _engine->getTensorShape(_engine->getIOTensorName(1));
+#endif
 
-    // Create CUDA stream
+    const size_t input_h = input_dims.d[2];
+    const size_t input_w = input_dims.d[3];
+    ROS_INFO("%ld, %ld", input_h, input_w);
+
     cudaStreamCreate(&_stream);
 
     cudaMalloc(&_buffers[0], 3 * input_h * input_w * sizeof(float));
@@ -88,10 +106,25 @@ bool LearningInterface::_save_engine(const std::string& onnx_path) {
 }
 
 void LearningInterface::predict() {
-    cudaMemcpyAsync(_buffers[0], _input_data, sizeof(_input_data) * sizeof(float), cudaMemcpyHostToDevice, _stream);
-    _context->executeV2(_buffers);
-    cudaStreamSynchronize(_stream);
-    cudaMemcpyAsync(_output_data, _buffers[1], sizeof(_input_data) * sizeof(float), cudaMemcpyDeviceToHost);
+    if (predict_mutex.try_lock()) {
+        ROS_INFO("INSIDE PREDICT");
+        // TODO: Use input, output size members to set memcpy size correctly
+        cudaMemcpyAsync(_buffers[0], _input_data, 0, cudaMemcpyHostToDevice, _stream);
+
+#if NV_TENSORRT_MAJOR < 10
+        _context->enqueueV2(_buffers, _stream, nullptr);
+#else
+        _context->executeV2(_buffers);
+#endif
+
+        cudaStreamSynchronize(_stream);
+        // TODO: Use input, output size members to set memcpy size correctly
+        cudaMemcpyAsync(_output_data, _buffers[1], 0, cudaMemcpyDeviceToHost);
+        predict_mutex.unlock();
+
+    } else {
+        ROS_INFO("predict in progress, skipping");
+    }
 }
 
 LearningInterface::~LearningInterface() {

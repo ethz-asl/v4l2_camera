@@ -9,8 +9,9 @@
 // This class provides access to protected members that we normally don't want to expose
 class DepthAnythingV2Test : public DepthAnythingV2 {
     public:
-        DepthAnythingV2Test(const std::string& model_path) : DepthAnythingV2(nullptr, model_path) {}
+        DepthAnythingV2Test(const std::string& model_path) : DepthAnythingV2(nullptr, model_path, std::string("")) {}
         float* get_input_data() { return _input_data; }
+        void load_model() { _load_model(); }
 };
 
 class TestDepthAnythingV2 : public ::testing::Test {

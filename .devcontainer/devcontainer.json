@@ -3,7 +3,8 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "ms-vscode.cpptools"
+                "ms-vscode.cpptools",
+                "ms-iot.vscode-ros"
             ],
             "settings": {
                 "files.hotExit": "off",

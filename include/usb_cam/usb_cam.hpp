@@ -119,6 +119,8 @@ typedef struct
   // or guvcview
   std::string pixel_format_name;
   std::string av_device_format;
+  std::string dav2_file;
+  std::string dav2_topic;
   int image_width;
   int image_height;
   int framerate;
