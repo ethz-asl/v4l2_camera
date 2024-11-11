@@ -73,7 +73,7 @@ public:
     UsbCamNode() : m_node("~") {
         // Setup the network that outputs derivates of the image captured
         // TODO: Actual network
-        networks.push_back(std::make_unique<DepthAnythingV2>("depth_anything_v2_vitb.onnx"));
+        networks.push_back(std::make_unique<DepthAnythingV2>(&m_node, "depth_anything_v2_vitb.onnx"));
 
         // Advertise the main image topic
         image_transport::ImageTransport it(m_node);
@@ -180,9 +180,8 @@ public:
         // Run all the networks
         for (const auto& net : networks) {
             net->set_input(m_image);
-            if (net->predict()) {
-                net->publish();
-            }
+            net->predict();
+            net->publish();
         }
 
         return true;

@@ -61,7 +61,6 @@ void LearningInterface::_build(std::string onnx_path) {
 }
 
 bool LearningInterface::_save_engine(const std::string& onnx_path) {
-    // Create an engine path from onnx path
     std::string engine_path;
     size_t dot_index = onnx_path.find_last_of(".");
     if (dot_index != std::string::npos) {
@@ -71,7 +70,6 @@ bool LearningInterface::_save_engine(const std::string& onnx_path) {
         return false;
     }
 
-    // Save the engine to the path
     if (_engine) {
         nvinfer1::IHostMemory* data = _engine->serialize();
         std::ofstream file;

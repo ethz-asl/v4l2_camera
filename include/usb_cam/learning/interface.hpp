@@ -16,7 +16,6 @@ public:
     LearningInterface() : _model_path("") {}
 
     virtual void set_input(sensor_msgs::Image& image) = 0;
-    virtual void get_output(uint8_t* output_buffer) = 0;
     virtual void publish() = 0;
 
     void load_model();

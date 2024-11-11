@@ -2,19 +2,23 @@
 #define DEPTH_ANYTHING_HPP_
 
 #include "interface.hpp"
+#include "ros/ros.h"
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include <sensor_msgs/Image.h>
 
 class DepthAnythingV2 : public LearningInterface {
 public:
-    DepthAnythingV2(std::string model_path) {
-        _model_path = model_path;
+    DepthAnythingV2(ros::NodeHandle* nh, std::string model_path) {
         _INPUT_SIZE = cv::Size(_HEIGHT, _WIDTH);
+        _model_path = model_path;
+
+        if (nh != nullptr) {
+            _depth_publication = nh->advertise<sensor_msgs::Image>("depth_anything_v2", 1);
+        }
     }
 
     void set_input(sensor_msgs::Image& msg) override {
-        // From ROS msg image to cv mat
         cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::RGB8);
         cv::Mat image = cv_ptr->image;
 
@@ -33,18 +37,25 @@ public:
         _input_data = float_image.reshape(1, 1).ptr<float>(0);
     }
 
-    void get_output(uint8_t* output_buffer) override {
-        // TODO
-    }
-
     void publish() override {
-        // TODO
+        cv::Mat depth_prediction = cv::Mat(_HEIGHT, _WIDTH, CV_32FC1, _output_data);
+
+        cv_bridge::CvImage depth_image;
+        depth_image.header.stamp = ros::Time::now();  // Set the timestamp
+        depth_image.header.frame_id = "depth_frame";   // Set the frame ID (update as needed)
+        depth_image.encoding = sensor_msgs::image_encodings::TYPE_32FC1; // Depth is typically float32, single channel
+        depth_image.image = depth_prediction;
+
+        if (_depth_publication.getTopic() != "") {
+            _depth_publication.publish(depth_image.toImageMsg());
+        }
     }
 
 private:
     const size_t _HEIGHT = 518;
     const size_t _WIDTH = 518;
     cv::Size _INPUT_SIZE;
+    ros::Publisher _depth_publication;
 };
 
 #endif // DEPTH_ANYTHING_HPP_

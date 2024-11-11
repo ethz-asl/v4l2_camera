@@ -9,7 +9,7 @@
 // This class provides access to protected members that we normally don't want to expose
 class DepthAnythingV2Test : public DepthAnythingV2 {
     public:
-        DepthAnythingV2Test(const std::string& model_path) : DepthAnythingV2(model_path) {}
+        DepthAnythingV2Test(const std::string& model_path) : DepthAnythingV2(nullptr, model_path) {}
         float* get_input_data() { return _input_data; }
 };
 
@@ -59,11 +59,7 @@ TEST_F(TestDepthAnythingV2, TestSetInput) {
 }
 
 TEST_F(TestDepthAnythingV2, TestPredict) {
-    auto start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < 10; i++) {
         depth_anything_v2->predict();
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "Time taken for 10 predictions: " << elapsed.count() << " seconds." << std::endl;
 }
