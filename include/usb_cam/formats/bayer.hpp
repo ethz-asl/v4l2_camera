@@ -113,7 +113,7 @@ private:
         }
 
         for (uint8_t i = 0; i < 3; ++i) {
-            channels[i].convertTo(channels[i], CV_8U, avg_gains[i] / 256.0);
+            channels[i].convertTo(channels[i], CV_8U, avg_gains[i] / 255.0);
         }
         ROS_DEBUG("BGR gains: %.3f %.3f %.3f", avg_gains[0], avg_gains[1], avg_gains[2]);
         cv::merge(channels, _rgb_image_out);
@@ -123,7 +123,7 @@ private:
         cv::cuda::split(_gpu_rgb_image, _gpu_rgb_channels);
 
         for (int i = 0; i < 3; ++i) {
-            _gpu_rgb_channels[i].convertTo(_gpu_rgb_channels[i], CV_8U, _wb_gains[i] / 256.0);
+            _gpu_rgb_channels[i].convertTo(_gpu_rgb_channels[i], CV_8U, _wb_gains[i] / 255.0);
         }
 
         cv::cuda::merge(_gpu_rgb_channels, _gpu_rgb_image_8bit);

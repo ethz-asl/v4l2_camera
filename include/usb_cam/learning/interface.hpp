@@ -1,21 +1,21 @@
 #ifndef LEARNING_INTERFACE_HPP_
 #define LEARNING_INTERFACE_HPP_
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <tuple>
 #include <algorithm>
-#include <opencv2/opencv.hpp>
+#include <fstream>
+#include <iostream>
 #include <NvInfer.h>
+#include <opencv2/opencv.hpp>
+#include <sensor_msgs/Image.h>
+#include <string>
+#include <tuple>
+#include <vector>
 
 class LearningInterface {
 public:
     LearningInterface() : _model_path("") {}
 
-    void set_input(cv::Mat input_image);
-
+    virtual void set_input(sensor_msgs::Image& image) = 0;
     virtual void get_output(uint8_t* output_buffer) = 0;
     virtual void publish() = 0;
 

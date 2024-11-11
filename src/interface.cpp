@@ -40,12 +40,7 @@ void LearningInterface::load_model() {
     _output_data = new float[input_h * input_w];
 }
 
-void LearningInterface::set_input(cv::Mat input_image) {
-    
-}
-
-void LearningInterface::_build(std::string onnx_path)
-{
+void LearningInterface::_build(std::string onnx_path) {
     auto builder = createInferBuilder(_logger);
     const auto explicitBatch = 1U << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
     INetworkDefinition* network = builder->createNetworkV2(explicitBatch);
@@ -98,8 +93,6 @@ void LearningInterface::predict() {
     cudaMemcpyAsync(_buffers[0], _input_data, sizeof(_input_data) * sizeof(float), cudaMemcpyHostToDevice, _stream);
     _context->executeV2(_buffers);
     cudaStreamSynchronize(_stream);
-
-    // Postprocessing
     cudaMemcpyAsync(_output_data, _buffers[1], sizeof(_input_data) * sizeof(float), cudaMemcpyDeviceToHost);
 }
 

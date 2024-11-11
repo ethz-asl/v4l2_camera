@@ -10,6 +10,7 @@ site/
 
 .devcontainer/*.deb
 *.out
-resources/*
+test/resources/*.engine
+test/resources/*.onnx
 build/*
 test/resources/*.plan
