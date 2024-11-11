@@ -2,6 +2,7 @@
 FROM ros:noetic-ros-core AS base
 
 ARG TZ=Europe/Zurich
+ARG VGLUSERS_GID=1004
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 
@@ -15,7 +16,8 @@ ENV LANG="en_US.UTF-8" \
 
 # Add user "asl" with sudo rights
 RUN groupadd -r asl && \
-    useradd --create-home --gid asl --groups dialout,plugdev --shell /bin/bash asl && \
+    groupadd -g ${VGLUSERS_GID} vglusers && \
+    useradd --create-home --gid asl --groups dialout,plugdev,vglusers --shell /bin/bash asl && \
     mkdir -p /etc/sudoers.d && \
     echo 'asl ALL=NOPASSWD: ALL' > /etc/sudoers.d/asl
 
