@@ -8,5 +8,9 @@
 docs/xml
 site/
 
-resources/*
+.devcontainer/*.deb
+*.out
+test/resources/*.engine
+test/resources/*.onnx
 build/*
+test/resources/*.plan

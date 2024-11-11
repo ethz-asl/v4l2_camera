@@ -1,80 +1,101 @@
 #include "usb_cam/learning/interface.hpp"
+#include <NvOnnxParser.h>
+
+using namespace nvinfer1;
 
 void LearningInterface::load_model() {
-    // Open and try to read the file
-    std::ifstream file(_model_path, std::ios::binary);
-    if (file.good()) {
-        file.seekg(0, std::ios::end);
-        const size_t model_size = file.tellg();
-        file.seekg(0, std::ios::beg);
+    if (_model_path.find(".onnx") == std::string::npos) {
+        std::ifstream engine_stream(_model_path, std::ios::binary);
+        engine_stream.seekg(0, std::ios::end);
 
-        // Read the model data
-        std::vector<char> model_data(model_size);
-        file.read(model_data.data(), model_size);
-        file.close();
+        const size_t model_size = engine_stream.tellg();
+        engine_stream.seekg(0, std::ios::beg);
 
-        // Create logger instance
-        class Logger : public nvinfer1::ILogger {
-        public:
-            void log(Severity severity, const char* msg) noexcept override {
-                std::cout << msg << std::endl; // Log the message
-            }
-        } logger; // Create a logger instance
+        std::unique_ptr<char[]> engine_data(new char[model_size]);
+        engine_stream.read(engine_data.get(), model_size);
+        engine_stream.close();
 
-        _runtime = nvinfer1::createInferRuntime(logger);
-        if (_runtime != nullptr) {
-            _engine = _runtime->deserializeCudaEngine(model_data.data(), model_size);
-            if (_engine != nullptr) {
-                _context = _engine->createExecutionContext();
-                if (_context != nullptr) {
-                    // Allocate buffers for input and output
-                    size_t input_size;
-                    size_t output_size;
-                    // for (int io = 0; io < _engine->getNbIOTensors(); io++) {
-                    //     const char* name = _engine->getIOTensorName(io);
-                    //     std::cout << io << ": " << name;
-                    //     const nvinfer1::Dims dims = _engine->getTensorShape(name);
+        // Create tensorrt model
+        _runtime = nvinfer1::createInferRuntime(_logger);
+        _engine = _runtime->deserializeCudaEngine(engine_data.get(), model_size);
+        _context = _engine->createExecutionContext();
 
-                    //     size_t total_dims = 1;
-                    //     for (int d = 0; d < dims.nbDims; d++) {
-                    //         total_dims *= dims.d[d];
-                    //     }
-
-                    //     std::cout << " size: " << total_dims << std::endl;
-                    //     if (io == 0) {
-                    //         input_size = total_dims * sizeof(float);
-                    //     } else if (io == 1) {
-                    //         output_size = total_dims * sizeof(float);
-                    //     }
-                    // }
-
-                    // Allocate device buffers
-                    cudaMalloc(&_buffers[0], input_size);
-                    cudaMalloc(&_buffers[1], output_size);
-
-                    // Allocate CPU buffers
-                    _input_buffer = new float[input_size / sizeof(float)];
-                    _output_buffer = new float[output_size / sizeof(float)];
-
-                    std::cout << "TensorRT model loaded successfully from: " << _model_path << std::endl;
-                } else {
-                    std::cout << "Failed to create execution context." << std::endl;
-                }
-            } else {
-                std::cout << "Failed to create TensorRT engine." << std::endl;
-            }
-        } else {
-            std::cout << "Failed to create TensorRT runtime." << std::endl;
-        }
     } else {
-        std::cout << "Failed to open model file." << std::endl;
+        // Build an engine from an onnx model
+        _build(_model_path);
+        _save_engine(_model_path);
     }
+
+    // Define input dimensions
+    const auto input_dims = _engine->getTensorShape(_engine->getIOTensorName(0));
+    const int input_h = input_dims.d[2];
+    const int input_w = input_dims.d[3];
+
+    // Create CUDA stream
+    cudaStreamCreate(&_stream);
+
+    cudaMalloc(&_buffers[0], 3 * input_h * input_w * sizeof(float));
+    cudaMalloc(&_buffers[1], input_h * input_w * sizeof(float));
+
+    _output_data = new float[input_h * input_w];
 }
 
-bool LearningInterface::run_inference(size_t batch_size) {
-    if (!_context->executeV2(_buffers)) {
-        std::cerr << "Failed to execute inference." << std::endl;
+void LearningInterface::_build(std::string onnx_path) {
+    auto builder = createInferBuilder(_logger);
+    const auto explicitBatch = 1U << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
+    INetworkDefinition* network = builder->createNetworkV2(explicitBatch);
+    IBuilderConfig* config = builder->createBuilderConfig();
+    config->setFlag(BuilderFlag::kFP16);
+    nvonnxparser::IParser* parser = nvonnxparser::createParser(*network, _logger);
+    bool parsed = parser->parseFromFile(onnx_path.c_str(), static_cast<int>(nvinfer1::ILogger::Severity::kINFO));
+    IHostMemory* plan{ builder->buildSerializedNetwork(*network, *config) };
+
+    _runtime = createInferRuntime(_logger);
+    _engine = _runtime->deserializeCudaEngine(plan->data(), plan->size());
+    _context = _engine->createExecutionContext();
+
+    delete network;
+    delete config;
+    delete parser;
+    delete plan;
+}
+
+bool LearningInterface::_save_engine(const std::string& onnx_path) {
+    std::string engine_path;
+    size_t dot_index = onnx_path.find_last_of(".");
+    if (dot_index != std::string::npos) {
+        engine_path = onnx_path.substr(0, dot_index) + ".engine";
+
+    } else {
         return false;
     }
+
+    if (_engine) {
+        nvinfer1::IHostMemory* data = _engine->serialize();
+        std::ofstream file;
+        file.open(engine_path, std::ios::binary | std::ios::out);
+        if (!file.is_open()) {
+            std::cout << "Create engine file" << engine_path << " failed" << std::endl;
+            return 0;
+        }
+
+        file.write((const char*)data->data(), data->size());
+        file.close();
+
+        delete data;
+    }
     return true;
+}
+
+void LearningInterface::predict() {
+    cudaMemcpyAsync(_buffers[0], _input_data, sizeof(_input_data) * sizeof(float), cudaMemcpyHostToDevice, _stream);
+    _context->executeV2(_buffers);
+    cudaStreamSynchronize(_stream);
+    cudaMemcpyAsync(_output_data, _buffers[1], sizeof(_input_data) * sizeof(float), cudaMemcpyDeviceToHost);
+}
+
+LearningInterface::~LearningInterface() {
+    cudaFree(_stream);
+    cudaFree(_buffers[0]);
+    cudaFree(_buffers[1]);
 }
