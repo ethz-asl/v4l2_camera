@@ -125,11 +125,10 @@ public:
 
         // Setup the network that outputs derivates of the image captured
         m_node.param("dav2_file", m_parameters.dav2_file, std::string(""));
-        m_node.param("dav2_metric_topic", m_parameters.dav2_metric_topic, std::string(""));
-        m_node.param("dav2_vis_topic", m_parameters.dav2_vis_topic, std::string(""));
+        m_node.param("dav2_topic", m_parameters.dav2_topic, std::string(""));
 
-        if (!m_parameters.dav2_file.empty() && !m_parameters.dav2_metric_topic.empty()) {
-            networks.push_back(std::make_unique<DepthAnythingV2>(&m_node, m_parameters.dav2_file, m_parameters.dav2_metric_topic, m_parameters.dav2_vis_topic));
+        if (!m_parameters.dav2_file.empty() && !m_parameters.dav2_topic.empty()) {
+            networks.push_back(std::make_unique<DepthAnythingV2>(&m_node, m_parameters.dav2_file, m_parameters.dav2_topic));
         }
 
         ROS_INFO("Starting '%s' (%s) at %dx%d via %s (%s) at %i FPS",
