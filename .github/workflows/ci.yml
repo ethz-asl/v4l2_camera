@@ -18,6 +18,20 @@ jobs:
           submodules: recursive
           set-safe-directory: true
 
+      # Step to download the ONNX file from Google Drive link
+      - name: Download ONNX model file
+        env:
+          ONNX_FILE_URL: ${{ secrets.DEPTH_ANYTHING_V2_VITS_LINK }}
+        run: |
+          # Create directory if it doesn't exist
+          mkdir -p tests/resources
+
+          # Extract Google Drive file ID from URL
+          FILE_ID=$(echo "$ONNX_FILE_URL" | sed -E 's|.*?/d/([^/]+).*|\1|')
+
+          # Download the file using Google Drive link and file ID
+          curl -L -o tests/resources/model.onnx "https://drive.google.com/uc?export=download&id=${FILE_ID}"
+
       - name: Run ${{ matrix.ci_script }}
         run: |
           bash -x ./ci/${{ matrix.ci_script }}.sh
