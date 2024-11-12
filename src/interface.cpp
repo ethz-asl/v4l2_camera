@@ -6,6 +6,23 @@ using namespace nvinfer1;
 
 std::mutex LearningInterface::predict_mutex;
 
+void LearningInterface::predict() {
+    if (predict_mutex.try_lock()) {
+        cudaMemcpyAsync(_buffers[0], _input_data, _input_size_float , cudaMemcpyHostToDevice, _stream);
+
+#if NV_TENSORRT_MAJOR < 10
+        _context->enqueueV2(_buffers, _stream, nullptr);
+#else
+        _context->executeV2(_buffers);
+#endif
+
+        cudaStreamSynchronize(_stream);
+        cudaMemcpyAsync(_output_data, _buffers[1], _output_size_float, cudaMemcpyDeviceToHost);
+        predict_mutex.unlock();
+
+    }
+}
+
 void LearningInterface::_load_model() {
     std::ifstream file_check(_model_path);
     if (!file_check.good()) {
@@ -59,9 +76,9 @@ void LearningInterface::_load_model() {
     _input_c = input_dims.d[1];
     _input_h = input_dims.d[2];
     _input_w = input_dims.d[3];
-    _output_c = output_dims.d[0];
-    _output_h = output_dims.d[1];
-    _output_w = output_dims.d[2];
+    _output_c = output_dims.d[1];
+    _output_h = output_dims.d[2];
+    _output_w = output_dims.d[3];
     _input_size_float = _input_c * _input_h * _input_w * sizeof(float);
     _output_size_float = _output_c * _output_h * _output_w * sizeof(float);
 
@@ -76,13 +93,12 @@ void LearningInterface::_load_model() {
 
 void LearningInterface::_build(std::string onnx_path) {
     auto builder = createInferBuilder(_logger);
-    const auto explicitBatch = 1U << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
-    INetworkDefinition* network = builder->createNetworkV2(explicitBatch);
+    const auto explicit_batch = 1U << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
+    INetworkDefinition* network = builder->createNetworkV2(explicit_batch);
     IBuilderConfig* config = builder->createBuilderConfig();
 
     // TODO: What about different hardware?
     config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, JETSON_MEM_LIMIT_B);
-    config->setFlag(BuilderFlag::kFP16);
     nvonnxparser::IParser* parser = nvonnxparser::createParser(*network, _logger);
     bool parsed = parser->parseFromFile(onnx_path.c_str(), static_cast<int>(nvinfer1::ILogger::Severity::kINFO));
     IHostMemory* plan{ builder->buildSerializedNetwork(*network, *config) };
@@ -113,23 +129,6 @@ bool LearningInterface::_save_engine(const std::string& engine_path) {
         delete data;
     }
     return true;
-}
-
-void LearningInterface::predict() {
-    if (predict_mutex.try_lock()) {
-        cudaMemcpyAsync(_buffers[0], _input_data, _input_size_float , cudaMemcpyHostToDevice, _stream);
-
-#if NV_TENSORRT_MAJOR < 10
-        _context->enqueueV2(_buffers, _stream, nullptr);
-#else
-        _context->executeV2(_buffers);
-#endif
-
-        cudaStreamSynchronize(_stream);
-        cudaMemcpyAsync(_output_data, _buffers[1], _output_size_float, cudaMemcpyDeviceToHost);
-        predict_mutex.unlock();
-
-    }
 }
 
 LearningInterface::~LearningInterface() {

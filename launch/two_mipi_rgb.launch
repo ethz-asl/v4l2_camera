@@ -18,7 +18,7 @@
     <param name="wb_green_gain" value="0.88"/>
     <param name="wb_red_gain" value="1.18"/>
 
-    <param name="dav2_file" value="/home/asl/Workspace/src/v4l2_camera/test/resources/depth_anything_vits14.onnx" />
+    <param name="dav2_file" value="/home/asl/Workspace/src/v4l2_camera/test/resources/depth_anything_v2_vits.onnx" />
     <param name="dav2_metric_topic" value="/depth0/relative" />
     <param name="dav2_vis_topic" value="/depth0/vis" />
   </node>
@@ -40,8 +40,8 @@
     <param name="wb_green_gain" value="0.88"/>
     <param name="wb_red_gain" value="1.18"/>
 
-    <!-- <param name="dav2_file" value="/home/asl/Workspace/src/v4l2_camera/test/resources/depth_anything_v2_vits_16_indoor.onnx" /> -->
-    <!-- <param name="dav2_metric_topic" value="/depth1/relative" /> -->
-    <!-- <param name="dav2_vis_topic" value="/depth1/vis" /> -->
+    <param name="dav2_file" value="" />
+    <param name="dav2_metric_topic" value="/depth1/relative" />
+    <param name="dav2_vis_topic" value="/depth1/vis" />
   </node>
 </launch>
