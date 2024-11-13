@@ -17,6 +17,9 @@
     <param name="wb_blue_gain" value="0.98"/>
     <param name="wb_green_gain" value="0.88"/>
     <param name="wb_red_gain" value="1.18"/>
+
+    <param name="dav2_file" value="/home/asl/Workspace/src/v4l2_camera/test/resources/depth_anything_v2_vits.onnx" />
+    <param name="dav2_topic" value="/cam0/depth/relative" />
   </node>
 
   <node name="cam1" pkg="usb_cam" type="usb_cam_node" output="screen" >
@@ -35,5 +38,9 @@
     <param name="wb_blue_gain" value="0.98"/>
     <param name="wb_green_gain" value="0.88"/>
     <param name="wb_red_gain" value="1.18"/>
+
+    <param name="dav2_file" value="/home/asl/Workspace/src/v4l2_camera/test/resources/depth_anything_v2_vits.onnx" />
+    <!-- Downfacing cam needs no depth prediction (yet) -->
+    <param name="dav2_topic" value="" /> 
   </node>
 </launch>

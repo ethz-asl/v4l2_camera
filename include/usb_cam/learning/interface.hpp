@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <NvInfer.h>
 #include <opencv2/opencv.hpp>
 #include <sensor_msgs/Image.h>
@@ -18,7 +19,6 @@ public:
     virtual void set_input(sensor_msgs::Image& image) = 0;
     virtual void publish() = 0;
 
-    void load_model();
     void predict();
 
     nvinfer1::ICudaEngine* get_engine() { return _engine; }
@@ -35,10 +35,17 @@ protected:
     nvinfer1::IExecutionContext* _context;
     nvinfer1::INetworkDefinition* _network;
     nvinfer1::IRuntime* _runtime;
+    size_t _input_c, _input_h, _input_w, _input_size_float;
+    size_t _output_c, _output_h, _output_w, _output_size_float;
     std::string _model_path;
 
+    void _load_model();
+
 private:
+    static constexpr size_t JETSON_MEM_LIMIT_B{3ULL * 1024 * 1024 * 1024};
+    std::mutex _predict_mutex;
     void* _buffers[2] = { nullptr, nullptr };
+
 
     // TODO: static?
     class Logger : public nvinfer1::ILogger {

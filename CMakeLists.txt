@@ -21,6 +21,12 @@ find_package(catkin REQUIRED COMPONENTS
 # Find OpenCV, Eigen, and CUDA
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
+
+# Set CUDA toolkit root directory if not already defined
+if(NOT DEFINED CUDA_TOOLKIT_ROOT_DIR)
+  set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-11.8")
+endif()
+message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
 find_package(CUDA REQUIRED)
 
 # Find FFmpeg libraries with PkgConfig
@@ -97,13 +103,14 @@ catkin_package(
 add_executable(${PROJECT_NAME}_node src/usb_cam_node.cpp)
 target_link_libraries(${PROJECT_NAME}_node
     ${PROJECT_NAME}
-    ${catkin_LIBRARIES}
     ${avcodec_LIBRARIES}
     ${avutil_LIBRARIES}
-    ${swscale_LIBRARIES}
-    ${NVINFER}
+    ${catkin_LIBRARIES}
+    ${CUDA_LIBRARIES}
     ${NVINFER_PLUGIN}
+    ${NVINFER}
     ${NVONNXPARSER}
+    ${swscale_LIBRARIES}
 )
 set_target_properties(${PROJECT_NAME}_node PROPERTIES LINK_FLAGS "-Wl,--no-as-needed")
 

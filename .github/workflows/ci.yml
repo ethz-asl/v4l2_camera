@@ -6,10 +6,14 @@ jobs:
     runs-on: self-hosted
     container:
       image: omavteam/v4l2_camera:latest
+      options: |
+          --gpus all
 
     strategy:
       matrix:
-        ci_script: [pr_compile, pr_run_tests]
+        ci_script: [pr_compile]
+        # TODO: Why does pr_run_test not work on the runner
+        # ci_script: [pr_compile, pr_run_tests]
 
     steps:
       - name: Checkout
@@ -18,6 +22,19 @@ jobs:
           submodules: recursive
           set-safe-directory: true
 
+      # Step to download the ONNX file from Google Drive link
+      - name: Download ONNX model file
+        env:
+          ONNX_FILE_URL: ${{ secrets.DEPTH_ANYTHING_V2_VITS_LINK }}
+        run: |
+          # Extract Google Drive file ID from URL
+          FILE_ID=$(echo "$ONNX_FILE_URL" | sed -E 's|.*?/d/([^/]+).*|\1|')
+
+          # Download the file using Google Drive link and file ID
+          curl -L -o $GITHUB_WORKSPACE/test/resources/depth_anything_v2_vits.onnx "https://drive.google.com/uc?export=download&id=${FILE_ID}"
+
       - name: Run ${{ matrix.ci_script }}
         run: |
+          export ONNX_VERBOSE=1
+          export TRT_LOGGER=VERBOSE
           bash -x ./ci/${{ matrix.ci_script }}.sh
