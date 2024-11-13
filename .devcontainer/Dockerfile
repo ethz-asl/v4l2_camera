@@ -30,6 +30,7 @@ RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86
 # CUDA: Add PATH and LD_LIBRARY_PATH to .bash_aliases
 RUN echo 'export PATH=$PATH:/usr/local/cuda-11.8/bin' >> /home/asl/.bash_aliases && \
     echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.8/lib64' >> /home/asl/.bash_aliases
+ENV CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.8
 
 # TensorRT: Install from .deb file: Seems we run 8.5.2.2 (which is bundled with 8.5.3)
 COPY .devcontainer/nv-tensorrt-local-repo-ubuntu2004-8.5.3-cuda-11.8_1.0-1_amd64.deb /tmp/tensorrt.deb

@@ -9,7 +9,7 @@
 
 class DepthAnythingV2 : public LearningInterface {
 public:
-    DepthAnythingV2(ros::NodeHandle* nh, std::string& model_path, std::string& metric_topic) {
+    DepthAnythingV2(ros::NodeHandle* nh, const std::string& model_path, const std::string& metric_topic) {
         _model_path = model_path;
         _load_model();
 

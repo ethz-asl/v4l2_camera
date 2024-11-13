@@ -21,6 +21,12 @@ find_package(catkin REQUIRED COMPONENTS
 # Find OpenCV, Eigen, and CUDA
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED)
+
+# Set CUDA toolkit root directory if not already defined
+if(NOT DEFINED CUDA_TOOLKIT_ROOT_DIR)
+  set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-11.8")
+endif()
+message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
 find_package(CUDA REQUIRED)
 
 # Find FFmpeg libraries with PkgConfig

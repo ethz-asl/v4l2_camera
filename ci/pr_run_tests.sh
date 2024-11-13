@@ -2,7 +2,7 @@
 source /opt/ros/noetic/setup.bash
 
 # Set paths for the model and plan files
-MODEL_PATH="test/resources/depth_anything_v2_vits_16.onnx"
+MODEL_PATH="test/resources/depth_anything_v2_vits.onnx"
 
 # Check if the ONNX model file exists
 if [ ! -f "$MODEL_PATH" ]; then
