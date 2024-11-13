@@ -93,22 +93,27 @@ void LearningInterface::_build(std::string onnx_path) {
     auto builder = createInferBuilder(_logger);
     const auto explicit_batch = 1U << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
     INetworkDefinition* network = builder->createNetworkV2(explicit_batch);
-    IBuilderConfig* config = builder->createBuilderConfig();
 
     // TODO: What about different hardware?
+    IBuilderConfig* config = builder->createBuilderConfig();
     config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, JETSON_MEM_LIMIT_B);
-    nvonnxparser::IParser* parser = nvonnxparser::createParser(*network, _logger);
-    bool parsed = parser->parseFromFile(onnx_path.c_str(), static_cast<int>(nvinfer1::ILogger::Severity::kINFO));
-    IHostMemory* plan{ builder->buildSerializedNetwork(*network, *config) };
 
-    _runtime = createInferRuntime(_logger);
-    _engine = _runtime->deserializeCudaEngine(plan->data(), plan->size());
-    _context = _engine->createExecutionContext();
+    nvonnxparser::IParser* parser = nvonnxparser::createParser(*network, _logger);
+    const bool parsed = parser->parseFromFile(onnx_path.c_str(), static_cast<int>(nvinfer1::ILogger::Severity::kVERBOSE));
+    if (parsed) {
+        IHostMemory* plan = builder->buildSerializedNetwork(*network, *config);
+        _runtime = createInferRuntime(_logger);
+        _engine = _runtime->deserializeCudaEngine(plan->data(), plan->size());
+        _context = _engine->createExecutionContext();
+        delete plan;
+
+    } else {
+        std::cerr << "Could not parse onnx file: " << onnx_path.c_str() << std::endl;
+    }
 
     delete network;
     delete config;
     delete parser;
-    delete plan;
 }
 
 bool LearningInterface::_save_engine(const std::string& engine_path) {

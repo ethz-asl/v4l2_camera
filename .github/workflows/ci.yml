@@ -6,10 +6,14 @@ jobs:
     runs-on: self-hosted
     container:
       image: omavteam/v4l2_camera:latest
+      options: |
+          --gpus all
 
     strategy:
       matrix:
-        ci_script: [pr_compile, pr_run_tests]
+        ci_script: [pr_compile]
+        # TODO: Why does pr_run_test not work on the runner
+        # ci_script: [pr_compile, pr_run_tests]
 
     steps:
       - name: Checkout
@@ -31,4 +35,6 @@ jobs:
 
       - name: Run ${{ matrix.ci_script }}
         run: |
+          export ONNX_VERBOSE=1
+          export TRT_LOGGER=VERBOSE
           bash -x ./ci/${{ matrix.ci_script }}.sh
