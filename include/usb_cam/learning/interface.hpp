@@ -43,7 +43,7 @@ protected:
 
 private:
     static constexpr size_t JETSON_MEM_LIMIT_B{3ULL * 1024 * 1024 * 1024};
-    static std::mutex predict_mutex;
+    std::mutex _predict_mutex;
     void* _buffers[2] = { nullptr, nullptr };
 
 

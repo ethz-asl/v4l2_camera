@@ -4,10 +4,8 @@
 
 using namespace nvinfer1;
 
-std::mutex LearningInterface::predict_mutex;
-
 void LearningInterface::predict() {
-    if (predict_mutex.try_lock()) {
+    if (_predict_mutex.try_lock()) {
         cudaMemcpyAsync(_buffers[0], _input_data, _input_size_float , cudaMemcpyHostToDevice, _stream);
 
 #if NV_TENSORRT_MAJOR < 10
@@ -18,7 +16,7 @@ void LearningInterface::predict() {
 
         cudaStreamSynchronize(_stream);
         cudaMemcpyAsync(_output_data, _buffers[1], _output_size_float, cudaMemcpyDeviceToHost);
-        predict_mutex.unlock();
+        _predict_mutex.unlock();
 
     }
 }
