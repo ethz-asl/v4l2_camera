@@ -1,0 +1,12 @@
+<launch>
+  <node name="depth0" pkg="usb_cam" type="image_processing_node" output="screen">
+    <param name="input_image_topic" value="/cam0/image_raw"/>
+    <param name="dav2_file" value="/workspaces/v4l2_camera/test/resources/depth_anything_v2_vits.onnx"/>
+    <param name="dav2_topic" value="/cam0/depth/relative"/>
+  </node>
+    <node name="depth1" pkg="usb_cam" type="image_processing_node" output="screen">
+    <param name="input_image_topic" value="/cam1/image_raw"/>
+    <param name="dav2_file" value="/workspaces/v4l2_camera/test/resources/depth_anything_v2_vits.onnx"/>
+    <param name="dav2_topic" value="/cam1/depth/relative"/>
+  </node>
+</launch>

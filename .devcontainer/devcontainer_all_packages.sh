@@ -56,6 +56,7 @@ main() {
         python3-pip
         python3-rosdep
         qv4l2
+        ros-noetic-rqt-image-view
         software-properties-common
         ssh
         sudo

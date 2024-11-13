@@ -16,7 +16,7 @@ class LearningInterface {
 public:
     LearningInterface() : _model_path("") {}
 
-    virtual void set_input(sensor_msgs::Image& image) = 0;
+    virtual void set_input(const sensor_msgs::Image& image) = 0;
     virtual void publish() = 0;
 
     void predict();

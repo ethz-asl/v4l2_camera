@@ -112,7 +112,13 @@ target_link_libraries(${PROJECT_NAME}_node
     ${NVONNXPARSER}
     ${swscale_LIBRARIES}
 )
-set_target_properties(${PROJECT_NAME}_node PROPERTIES LINK_FLAGS "-Wl,--no-as-needed")
+
+add_executable(image_processing_node src/learning_node.cpp)
+target_link_libraries(image_processing_node
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
 
 # Ensure include directories are set
 target_include_directories(${PROJECT_NAME}_node PUBLIC

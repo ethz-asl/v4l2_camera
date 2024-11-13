@@ -28,6 +28,11 @@
             "source": "${localEnv:HOME}/.cache",
             "target": "/home/asl/.cache",
             "type": "bind"
+        },
+        {
+            "source": "${localEnv:HOME}/Downloads",
+            "target": "/home/asl/Downloads",
+            "type": "bind"
         }
     ],
     "runArgs": [

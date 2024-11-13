@@ -18,7 +18,7 @@ public:
         }
     }
 
-    void set_input(sensor_msgs::Image& msg) override {
+    void set_input(const sensor_msgs::Image& msg) override {
         // Keep track of input image size, we want to get the same output image dimensions
         _output_image_w = msg.width;
         _output_image_h = msg.height;
