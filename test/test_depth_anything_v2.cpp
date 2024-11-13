@@ -16,8 +16,8 @@ class DepthAnythingV2Test : public DepthAnythingV2 {
 
 class TestDepthAnythingV2 : public ::testing::Test {
 protected:
-    const std::string model_path = "/workspaces/v4l2_camera/test/resources/depth_anything_v2_vits.onnx";
-    const std::string test_image_path = "/workspaces/v4l2_camera/test/resources/maschinenhalle_example_frame.jpg";
+    const std::string model_path = "../test/resources/depth_anything_v2_vits.onnx";
+    const std::string test_image_path = "../test/resources/maschinenhalle_example_frame.jpg";
 
     cv_bridge::CvImage cv_image;
     cv::Mat img;
