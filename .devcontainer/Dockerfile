@@ -1,5 +1,5 @@
 # Base Stage: ROS and CUDA Installation
-FROM ros:noetic-ros-core AS base
+FROM ros:noetic-ros-base AS base
 
 ARG TZ=Europe/Zurich
 ARG VGLUSERS_GID=1004
@@ -13,6 +13,12 @@ RUN /tmp/devcontainer_all_packages.sh && rm -f /tmp/devcontainer_all_packages.sh
 ENV LANG="en_US.UTF-8" \
     LANGUAGE="en_US:en" \
     LC_ALL="en_US.UTF-8"
+
+# Python packages
+COPY .devcontainer/requirements.txt /tmp/requirements.txt
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install --ignore-installed -r /tmp/requirements.txt && \
+    rm -f /tmp/requirements.txt
 
 # Add user "asl" with sudo rights
 RUN groupadd -r asl && \

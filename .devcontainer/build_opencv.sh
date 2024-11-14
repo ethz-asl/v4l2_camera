@@ -150,7 +150,7 @@ configure() {
     local CMAKEFLAGS="
         -D BUILD_EXAMPLES=OFF
         -D BUILD_opencv_python2=OFF
-        -D BUILD_opencv_python3=OFF
+        -D BUILD_opencv_python3=ON
         -D CMAKE_BUILD_TYPE=RELEASE
         -D CMAKE_INSTALL_PREFIX=${PREFIX}
         -D CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.8
