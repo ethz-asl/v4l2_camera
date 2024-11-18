@@ -22,6 +22,7 @@ public:
         // Keep track of input image size, we want to get the same output image dimensions
         _output_image_w = msg.width;
         _output_image_h = msg.height;
+        _output_image_timestamp = msg.header.stamp;
 
         cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::RGB8);
         cv::Mat image = cv_ptr->image;
@@ -40,7 +41,7 @@ void publish() override {
         cv::Mat depth_resized;
         cv::resize(depth_prediction, depth_resized, cv::Size(_output_image_w, _output_image_h));
         cv_bridge::CvImage depth_image;
-        depth_image.header.stamp = ros::Time::now();
+        depth_image.header.stamp = _output_image_timestamp;
         depth_image.header.frame_id = "depth_frame";
         depth_image.encoding = sensor_msgs::image_encodings::TYPE_32FC1;
         depth_image.image = depth_resized;
@@ -53,6 +54,7 @@ private:
     const float mean[3] = { 123.675f, 116.28f, 103.53f };
     const float std[3] = { 58.395f, 57.12f, 57.375f };
     ros::Publisher _depth_pub;
+    ros::Time _output_image_timestamp;
     uint32_t _output_image_w, _output_image_h;
 
     std::vector<float> _preprocess(cv::Mat& image) {

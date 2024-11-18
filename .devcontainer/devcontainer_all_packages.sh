@@ -54,6 +54,7 @@ main() {
         python3-matplotlib
         python3-numpy
         python3-pip
+        python3-pyqt5
         python3-rosdep
         qv4l2
         ros-noetic-rqt-image-view

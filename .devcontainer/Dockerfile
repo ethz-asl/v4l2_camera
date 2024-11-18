@@ -74,7 +74,7 @@ RUN echo 'if [ -f "$HOME/.bash-git-prompt/gitprompt.sh" ]; then GIT_PROMPT_ONLY_
 RUN echo "source /opt/ros/noetic/setup.bash" >> /home/asl/.bash_aliases
 
 # ROS: rosdep install (TODO: maybe not so clean?)
-RUN sudo rosdep init
+# RUN sudo rosdep init
 USER asl
 RUN rosdep update
 COPY package.xml /tmp/
